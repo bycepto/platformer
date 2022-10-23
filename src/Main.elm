@@ -85,6 +85,13 @@ viewBody _ =
     H.div
         [ At.style "display" "flex"
         , At.style "justify-content" "center"
+        , At.style "align-items" "center"
+
+        -- background
+        , At.style "background-color" "rgba(0,0,0,0.1)"
+
+        -- fill
+        , At.style "height" "100vh"
         ]
         [ viewGame ]
 
@@ -93,8 +100,8 @@ viewGame : H.Html Msg
 viewGame =
     V.toHtml
         ( width, height )
-        [ At.style "border" "5px solid rgba(0,0,0,0.1)"
-        , At.style "display" "block"
+        [ At.style "height" (String.fromInt height ++ "px")
+        , At.style "background-color" "#FFF"
         ]
         [ V.clear ( 0, 0 ) width height
         , renderSquare
