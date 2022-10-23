@@ -1,0 +1,32 @@
+{
+  "name": "platformed",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "yarn run vite --port 3004",
+    "build": "yarn run vite build",
+    "preview": "yarn run vite preview",
+    "test": "elm-test"
+  },
+  "devDependencies": {
+    "elm": "^0.19.1-5",
+    "vite": "^3.1.8",
+    "vite-plugin-elm": "^2.7.2"
+  },
+  "dependencies": {
+    "elm-canvas": "^2.2.4"
+  },
+  "homepage": "https://maximpertsov.github.io",
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
