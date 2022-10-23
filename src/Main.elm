@@ -11,6 +11,8 @@ import Canvas.Settings.Advanced as VA
 import Color
 import Html as H
 import Html.Attributes as At
+import Keyboard as K
+import Keyboard.Arrows as KA
 
 
 
@@ -32,12 +34,48 @@ main =
 
 
 type alias Model =
-    { tick : Float }
+    { -- game loop ticker
+      tick : Float
+
+    -- roller
+    , position : V.Point
+
+    -- keyboard
+    , pressedKeys : List K.Key
+    }
 
 
 initModel : Model
 initModel =
-    { tick = 0 }
+    { -- game loop ticker
+      tick = 0
+
+    -- roller
+    , position = initRollerPosition
+
+    -- keyboard
+    , pressedKeys = []
+    }
+
+
+initRollerPosition : V.Point
+initRollerPosition =
+    ( 25, height * 0.75 - rollerRadius )
+
+
+rollerRadius : Float
+rollerRadius =
+    25
+
+
+rollerRotation : Float -> Float
+rollerRotation x =
+    degrees (x * degreesPerTick)
+
+
+degreesPerTick : Float
+degreesPerTick =
+    3.0
 
 
 
@@ -59,13 +97,52 @@ init _ =
 
 type Msg
     = Frame Float
+    | GotKeyPress K.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Frame _ ->
-            ( { model | tick = model.tick + 1 }, Cmd.none )
+            ( handleFrame model, Cmd.none )
+
+        GotKeyPress keyMsg ->
+            ( { model | pressedKeys = K.update keyMsg model.pressedKeys }, Cmd.none )
+
+
+handleFrame : Model -> Model
+handleFrame model =
+    model
+        |> applyKeyboardInputs
+        |> incrementTick
+
+
+applyKeyboardInputs : Model -> Model
+applyKeyboardInputs model =
+    let
+        { x, y } =
+            KA.arrows model.pressedKeys
+    in
+    if x /= 0 then
+        { model
+            | position =
+                Tuple.mapFirst
+                    (\posX -> posX + toFloat x * rollerAccelerationX)
+                    model.position
+        }
+
+    else
+        model
+
+
+rollerAccelerationX : Float
+rollerAccelerationX =
+    3.0
+
+
+incrementTick : { a | tick : Float } -> { a | tick : Float }
+incrementTick model =
+    { model | tick = model.tick + 1 }
 
 
 
@@ -76,6 +153,7 @@ subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
         [ BE.onAnimationFrameDelta Frame
+        , Sub.map GotKeyPress K.subscriptions
         ]
 
 
@@ -127,11 +205,11 @@ renderSquare model =
         ]
 
 
-renderRoller : { a | tick : Float } -> V.Renderable
-renderRoller { tick } =
+renderRoller : Model -> V.Renderable
+renderRoller model =
     let
-        ( cx, cy, radius ) =
-            ( 25, 25, 25 )
+        ( cx, cy ) =
+            model.position
     in
     V.shapes
         [ VS.fill Color.white
@@ -140,25 +218,15 @@ renderRoller { tick } =
         -- rotate
         , VA.transform
             [ VA.translate cx cy
-            , VA.rotate (rollerRotation { tick = tick })
+            , VA.rotate (rollerRotation <| Tuple.first model.position)
             , VA.translate -cx -cy
             ]
         ]
-        [ V.circle ( cx, cy ) radius
-        , V.path ( cx, cy + 15 )
-            [ V.lineTo ( cx, cx + radius )
+        [ V.circle ( cx, cy ) rollerRadius
+        , V.path ( cx, cy + (0.75 * rollerRadius) )
+            [ V.lineTo ( cx, cy + rollerRadius )
             ]
         ]
-
-
-rollerRotation : { a | tick : Float } -> Float
-rollerRotation { tick } =
-    degrees (tick * degreesPerTick)
-
-
-degreesPerTick : Float
-degreesPerTick =
-    3.0
 
 
 renderFloor : V.Renderable
