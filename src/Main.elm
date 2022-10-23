@@ -1,12 +1,13 @@
 module Main exposing (main)
 
--- import Canvas.Settings.Advanced as VA
 -- import Canvas.Settings.Text as VW
 -- import Canvas.Texture as VT
 
 import Browser exposing (Document)
+import Browser.Events as BE
 import Canvas as V
 import Canvas.Settings as VS
+import Canvas.Settings.Advanced as VA
 import Color
 import Html as H
 import Html.Attributes as At
@@ -31,7 +32,12 @@ main =
 
 
 type alias Model =
-    ()
+    { tick : Float }
+
+
+initModel : Model
+initModel =
+    { tick = 0 }
 
 
 
@@ -44,20 +50,22 @@ type alias Flags =
 
 init : Flags -> ( Model, Cmd Msg )
 init _ =
-    ( (), Cmd.none )
+    ( initModel, Cmd.none )
 
 
 
 -- UPDATE
 
 
-type alias Msg =
-    ()
+type Msg
+    = Frame Float
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update _ model =
-    ( model, Cmd.none )
+update msg model =
+    case msg of
+        Frame _ ->
+            ( { model | tick = model.tick + 1 }, Cmd.none )
 
 
 
@@ -66,7 +74,9 @@ update _ model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    Sub.batch
+        [ BE.onAnimationFrameDelta Frame
+        ]
 
 
 
@@ -81,7 +91,7 @@ view model =
 
 
 viewBody : Model -> H.Html Msg
-viewBody _ =
+viewBody model =
     H.div
         [ At.style "display" "flex"
         , At.style "justify-content" "center"
@@ -93,26 +103,69 @@ viewBody _ =
         -- fill
         , At.style "height" "100vh"
         ]
-        [ viewGame ]
+        [ viewGame model ]
 
 
-viewGame : H.Html Msg
-viewGame =
+viewGame : Model -> H.Html Msg
+viewGame model =
     V.toHtml
         ( width, height )
         [ At.style "height" (String.fromInt height ++ "px")
         , At.style "background-color" "#FFF"
         ]
         [ V.clear ( 0, 0 ) width height
-        , renderSquare
+        , renderSquare model
         ]
 
 
-renderSquare : V.Renderable
-renderSquare =
+renderSquare : Model -> V.Renderable
+renderSquare model =
+    V.group
+        []
+        [ renderFloor
+        , renderRoller model
+        ]
+
+
+renderRoller : { a | tick : Float } -> V.Renderable
+renderRoller { tick } =
+    let
+        ( cx, cy, radius ) =
+            ( 25, 25, 25 )
+    in
     V.shapes
-        [ VS.fill (Color.rgba 0 0 0 1) ]
-        [ V.rect ( 0, 0 ) 100 50 ]
+        [ VS.fill Color.white
+        , VS.stroke Color.black
+
+        -- rotate
+        , VA.transform
+            [ VA.translate cx cy
+            , VA.rotate (rollerRotation { tick = tick })
+            , VA.translate -cx -cy
+            ]
+        ]
+        [ V.circle ( cx, cy ) radius
+        , V.path ( cx, cy + 15 )
+            [ V.lineTo ( cx, cx + radius )
+            ]
+        ]
+
+
+rollerRotation : { a | tick : Float } -> Float
+rollerRotation { tick } =
+    degrees (tick * degreesPerTick)
+
+
+degreesPerTick : Float
+degreesPerTick =
+    3.0
+
+
+renderFloor : V.Renderable
+renderFloor =
+    V.shapes
+        [ VS.fill Color.grey ]
+        [ V.rect ( 0, height * 0.75 ) width 10 ]
 
 
 width : number
