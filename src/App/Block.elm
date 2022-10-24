@@ -18,10 +18,10 @@ type alias Block =
     }
 
 
-init : Block
-init =
-    { x = 25
-    , y = 150
+init : Float -> Float -> Block
+init x y =
+    { x = x
+    , y = y
     , width = 100
     , height = 300
     }
