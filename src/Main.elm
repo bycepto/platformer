@@ -1,7 +1,7 @@
 module Main exposing (main)
 
 import App.Block exposing (Block)
-import App.Collisions exposing (CollisionType(..))
+import App.Collisions
 import App.Roller exposing (Roller)
 import Browser exposing (Document)
 import Browser.Events as BE
@@ -104,30 +104,33 @@ handleCollisions model =
         blockBB =
             App.Block.boundingBox model.block
     in
-    case App.Collisions.collision blockBB rollerBB of
-        [] ->
+    case App.Collisions.collision rollerBB blockBB of
+        Nothing ->
             -- bootleg gravity
             { model | roller = { roller | velY = 1 } }
 
-        collisions ->
+        Just { left, right, top, bottom } ->
             let
+                sides_ =
+                    Debug.log "sides" { left = left, right = right, top = top, bottom = bottom }
+
                 newRoller =
                     { roller
                         | velX =
-                            if List.member Left collisions then
-                                max roller.velX 0
-
-                            else if List.member Right collisions then
+                            if left && not top then
                                 min roller.velX 0
+
+                            else if right && not top then
+                                max roller.velX 0
 
                             else
                                 roller.velX
                         , velY =
-                            if List.member Top collisions then
-                                max roller.velY 0
-
-                            else if List.member Bottom collisions then
+                            if top then
                                 min roller.velY 0
+
+                            else if bottom then
+                                max roller.velY 0
 
                             else
                                 roller.velY

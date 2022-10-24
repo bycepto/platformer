@@ -21,9 +21,9 @@ type alias Block =
 init : Block
 init =
     { x = 25
-    , y = 350
+    , y = 150
     , width = 100
-    , height = 100
+    , height = 300
     }
 
 
@@ -42,5 +42,5 @@ render block =
         [ VS.fill Color.white
         , VS.stroke Color.grey
         ]
-        [ V.rect ( block.x, block.y ) block.height block.width
+        [ V.rect ( block.x, block.y ) block.width block.height
         ]

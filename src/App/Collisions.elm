@@ -1,4 +1,8 @@
-module App.Collisions exposing (BoundingBox, CollisionType(..), collision)
+module App.Collisions exposing
+    ( BoundingBox
+    , CollisionSides
+    , collision
+    )
 
 
 type alias BoundingBox =
@@ -9,16 +13,16 @@ type alias BoundingBox =
     }
 
 
-type CollisionType
-    = Top
-    | Bottom
-    | Left
-    | Right
+type alias CollisionSides =
+    { top : Bool
+    , bottom : Bool
+    , left : Bool
+    , right : Bool
+    }
 
 
 {-| Check for collisions between two bounding boxes. If there is a collision,
-returns a list of sides that the first bounding box hit on the second bound
-box.
+return which sides the first bounding box hit on the second bound box.
 
 For example:
 
@@ -28,10 +32,10 @@ For example:
 #.....##.....#
 ##############
 
-This is a LEFT collision, since BB1 collided with the left side of BB2
+BB1 hits the LEFT side of BB2, so the result will be Just {left=true, ...}
 
 -}
-collision : BoundingBox -> BoundingBox -> List CollisionType
+collision : BoundingBox -> BoundingBox -> Maybe CollisionSides
 collision bb1 bb2 =
     if
         (bb1.x < bb2.x + bb2.width)
@@ -39,28 +43,12 @@ collision bb1 bb2 =
             && (bb1.y < bb2.y + bb2.height)
             && (bb1.height + bb1.y > bb2.y)
     then
-        List.concat
-            [ if bb1.x < bb2.x then
-                [ Left ]
-
-              else
-                []
-            , if bb1.x + bb1.width > bb2.x + bb2.width then
-                [ Right ]
-
-              else
-                []
-            , if bb1.y < bb2.y then
-                [ Top ]
-
-              else
-                []
-            , if bb1.y + bb1.height > bb2.y + bb2.height then
-                [ Bottom ]
-
-              else
-                []
-            ]
+        Just
+            { left = bb1.x < bb2.x
+            , right = bb1.x + bb1.width > bb2.x + bb2.width
+            , top = bb1.y < bb2.y
+            , bottom = bb1.y + bb1.height > bb2.y + bb2.height
+            }
 
     else
-        []
+        Nothing
