@@ -21,13 +21,21 @@ type alias Env a =
 type alias Roller =
     { x : Float
     , y : Float
+    , velX : Float
+    , velY : Float
     }
 
 
 init : Float -> Roller
 init height =
-    { x = 25
-    , y = height * 0.75 - radius
+    { x = 75
+
+    -- , y = height * 0.75 - radius
+    , y = 25
+    , velX = 0
+
+    -- bootleg gravity
+    , velY = 1
     }
 
 
@@ -54,6 +62,7 @@ update : Env a -> Roller -> Roller
 update env roller =
     roller
         |> applyKeyboardInputs env
+        |> applyPhysics
 
 
 applyKeyboardInputs : Env a -> Roller -> Roller
@@ -70,10 +79,18 @@ applyKeyboardInputs env roller =
                 1
     in
     if x /= 0 then
-        { roller | x = roller.x + toFloat x * accelerationX * speedModifier }
+        { roller | velX = toFloat x * accelerationX * speedModifier }
 
     else
-        roller
+        { roller | velX = 0 }
+
+
+applyPhysics : Roller -> Roller
+applyPhysics roller =
+    { roller
+        | x = roller.x + roller.velX
+        , y = roller.y + roller.velY
+    }
 
 
 accelerationX : Float

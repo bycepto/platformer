@@ -20,7 +20,7 @@ type alias Block =
 init : Block
 init =
     { x = 25
-    , y = 25
+    , y = 350
     , width = 100
     , height = 100
     }
