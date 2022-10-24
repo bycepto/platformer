@@ -1,5 +1,13 @@
-module App.Roller exposing (Roller, init, render, update)
+module App.Roller exposing
+    ( Roller
+    , applyKeyboardInputs
+    , applyPhysics
+    , boundingBox
+    , init
+    , render
+    )
 
+import App.Collisions exposing (BoundingBox)
 import Canvas as V
 import Canvas.Settings as VS
 import Canvas.Settings.Advanced as VA
@@ -54,15 +62,13 @@ degreesPerMove =
     3.0
 
 
+boundingBox : Roller -> BoundingBox
+boundingBox { x, y } =
+    BoundingBox (x - radius) (y - radius) (radius * 2) (radius * 2)
+
+
 
 -- UPDATE
-
-
-update : Env a -> Roller -> Roller
-update env roller =
-    roller
-        |> applyKeyboardInputs env
-        |> applyPhysics
 
 
 applyKeyboardInputs : Env a -> Roller -> Roller
@@ -87,9 +93,10 @@ applyKeyboardInputs env roller =
 
 applyPhysics : Roller -> Roller
 applyPhysics roller =
+    -- TODO: don't wrap, this is just for testing
     { roller
-        | x = roller.x + roller.velX
-        , y = roller.y + roller.velY
+        | x = toFloat <| modBy 640 (round <| roller.x + roller.velX)
+        , y = toFloat <| modBy 480 (round <| roller.y + roller.velY)
     }
 
 

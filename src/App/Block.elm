@@ -1,5 +1,6 @@
-module App.Block exposing (Block, init, render)
+module App.Block exposing (Block, boundingBox, init, render)
 
+import App.Collisions exposing (BoundingBox)
 import Canvas as V
 import Canvas.Settings as VS
 import Color
@@ -26,6 +27,11 @@ init =
     }
 
 
+boundingBox : Block -> BoundingBox
+boundingBox =
+    identity
+
+
 
 -- RENDER
 
@@ -34,7 +40,7 @@ render : Block -> V.Renderable
 render block =
     V.shapes
         [ VS.fill Color.white
-        , VS.stroke Color.black
+        , VS.stroke Color.grey
         ]
         [ V.rect ( block.x, block.y ) block.height block.width
         ]

@@ -1,12 +1,11 @@
 module Main exposing (main)
 
 import App.Block exposing (Block)
+import App.Collisions exposing (CollisionType(..))
 import App.Roller exposing (Roller)
 import Browser exposing (Document)
 import Browser.Events as BE
 import Canvas as V
-import Canvas.Settings as VS
-import Color
 import Html as H
 import Html.Attributes as At
 import Keyboard as K
@@ -87,13 +86,64 @@ update msg model =
 handleFrame : Model -> Model
 handleFrame model =
     model
-        |> updateRoller
+        |> updateRollerInputs
+        |> handleCollisions
+        |> updateRollerPhysics
         |> incrementTick
 
 
-updateRoller : Model -> Model
-updateRoller model =
-    { model | roller = App.Roller.update model model.roller }
+handleCollisions : Model -> Model
+handleCollisions model =
+    let
+        roller =
+            model.roller
+
+        rollerBB =
+            App.Roller.boundingBox roller
+
+        blockBB =
+            App.Block.boundingBox model.block
+    in
+    case App.Collisions.collision blockBB rollerBB of
+        [] ->
+            -- bootleg gravity
+            { model | roller = { roller | velY = 1 } }
+
+        collisions ->
+            let
+                newRoller =
+                    { roller
+                        | velX =
+                            if List.member Left collisions then
+                                max roller.velX 0
+
+                            else if List.member Right collisions then
+                                min roller.velX 0
+
+                            else
+                                roller.velX
+                        , velY =
+                            if List.member Top collisions then
+                                max roller.velY 0
+
+                            else if List.member Bottom collisions then
+                                min roller.velY 0
+
+                            else
+                                roller.velY
+                    }
+            in
+            { model | roller = newRoller }
+
+
+updateRollerInputs : Model -> Model
+updateRollerInputs model =
+    { model | roller = App.Roller.applyKeyboardInputs model model.roller }
+
+
+updateRollerPhysics : Model -> Model
+updateRollerPhysics model =
+    { model | roller = App.Roller.applyPhysics model.roller }
 
 
 incrementTick : { a | tick : Float } -> { a | tick : Float }
@@ -157,17 +207,9 @@ viewGame model =
 render : Model -> List V.Renderable
 render model =
     [ V.clear ( 0, 0 ) width height
-    , renderFloor
     , App.Roller.render model.roller
     , App.Block.render model.block
     ]
-
-
-renderFloor : V.Renderable
-renderFloor =
-    V.shapes
-        [ VS.fill Color.grey ]
-        [ V.rect ( 0, height * 0.75 ) width 1 ]
 
 
 width : number
