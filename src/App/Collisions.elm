@@ -45,7 +45,7 @@ collision bb1 bb2 =
 
               else
                 []
-            , if bb1.x > bb2.x then
+            , if bb1.x + bb1.width > bb2.x + bb2.width then
                 [ Right ]
 
               else
@@ -55,7 +55,7 @@ collision bb1 bb2 =
 
               else
                 []
-            , if bb1.y > bb2.y then
+            , if bb1.y + bb1.height > bb2.y + bb2.height then
                 [ Bottom ]
 
               else
