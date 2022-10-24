@@ -19,19 +19,16 @@ type alias Env a =
 
 
 type alias Roller =
-    { position : V.Point
+    { x : Float
+    , y : Float
     }
 
 
 init : Float -> Roller
 init height =
-    { position = initPosition height
+    { x = 25
+    , y = height * 0.75 - radius
     }
-
-
-initPosition : Float -> V.Point
-initPosition height =
-    ( 25, height * 0.75 - radius )
 
 
 radius : Float
@@ -66,12 +63,7 @@ applyKeyboardInputs env roller =
             KA.arrows env.pressedKeys
     in
     if x /= 0 then
-        { roller
-            | position =
-                Tuple.mapFirst
-                    (\posX -> posX + toFloat x * accelerationX)
-                    roller.position
-        }
+        { roller | x = roller.x + toFloat x * accelerationX }
 
     else
         roller
@@ -87,24 +79,20 @@ accelerationX =
 
 
 render : Roller -> V.Renderable
-render model =
-    let
-        ( cx, cy ) =
-            model.position
-    in
+render roller =
     V.shapes
         [ VS.fill Color.white
         , VS.stroke Color.black
 
         -- rotate
         , VA.transform
-            [ VA.translate cx cy
-            , VA.rotate (rotation <| Tuple.first model.position)
-            , VA.translate -cx -cy
+            [ VA.translate roller.x roller.y
+            , VA.rotate (rotation roller.x)
+            , VA.translate -roller.x -roller.y
             ]
         ]
-        [ V.circle ( cx, cy ) radius
-        , V.path ( cx, cy + (0.75 * radius) )
-            [ V.lineTo ( cx, cy + radius )
+        [ V.circle ( roller.x, roller.y ) radius
+        , V.path ( roller.x, roller.y + (0.75 * radius) )
+            [ V.lineTo ( roller.x, roller.y + radius )
             ]
         ]
