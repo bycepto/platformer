@@ -1,6 +1,6 @@
 module Main exposing (main)
 
-
+import App.Block exposing (Block)
 import App.Roller exposing (Roller)
 import Browser exposing (Document)
 import Browser.Events as BE
@@ -37,8 +37,9 @@ type alias Model =
     -- keyboard
     , pressedKeys : List K.Key
 
-    -- roller
+    -- entities
     , roller : Roller
+    , block : Block
     }
 
 
@@ -47,6 +48,7 @@ initModel =
     { tick = 0
     , pressedKeys = []
     , roller = App.Roller.init height
+    , block = App.Block.init
     }
 
 
@@ -155,17 +157,10 @@ viewGame model =
 render : Model -> List V.Renderable
 render model =
     [ V.clear ( 0, 0 ) width height
-    , renderSquare model
+    , renderFloor
+    , App.Roller.render model.roller
+    , App.Block.render model.block
     ]
-
-
-renderSquare : Model -> V.Renderable
-renderSquare model =
-    V.group
-        []
-        [ renderFloor
-        , App.Roller.render model.roller
-        ]
 
 
 renderFloor : V.Renderable
