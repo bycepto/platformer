@@ -61,9 +61,16 @@ applyKeyboardInputs env roller =
     let
         { x } =
             KA.arrows env.pressedKeys
+
+        speedModifier =
+            if List.member K.Shift env.pressedKeys then
+                0.5
+
+            else
+                1
     in
     if x /= 0 then
-        { roller | x = roller.x + toFloat x * accelerationX }
+        { roller | x = roller.x + toFloat x * accelerationX * speedModifier }
 
     else
         roller
@@ -91,8 +98,21 @@ render roller =
             , VA.translate -roller.x -roller.y
             ]
         ]
-        [ V.circle ( roller.x, roller.y ) radius
-        , V.path ( roller.x, roller.y + (0.75 * radius) )
-            [ V.lineTo ( roller.x, roller.y + radius )
-            ]
+        (ballWithEyes roller)
+
+
+ballWithDash : Roller -> List V.Shape
+ballWithDash roller =
+    [ V.circle ( roller.x, roller.y ) radius
+    , V.path ( roller.x, roller.y + (0.75 * radius) )
+        [ V.lineTo ( roller.x, roller.y + radius )
         ]
+    ]
+
+
+ballWithEyes : Roller -> List V.Shape
+ballWithEyes roller =
+    [ V.circle ( roller.x, roller.y ) radius
+    , V.circle ( roller.x, roller.y + (0.35 * radius) ) 3
+    , V.circle ( roller.x + (0.75 * radius), roller.y + (0.35 * radius) ) 3
+    ]

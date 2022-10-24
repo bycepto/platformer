@@ -1,7 +1,5 @@
 module Main exposing (main)
 
--- import Canvas.Settings.Text as VW
--- import Canvas.Texture as VT
 
 import App.Roller exposing (Roller)
 import Browser exposing (Document)
@@ -147,9 +145,18 @@ viewGame model =
         [ At.style "height" (String.fromInt height ++ "px")
         , At.style "background-color" "#FFF"
         ]
-        [ V.clear ( 0, 0 ) width height
-        , renderSquare model
-        ]
+        (render model)
+
+
+
+-- RENDER
+
+
+render : Model -> List V.Renderable
+render model =
+    [ V.clear ( 0, 0 ) width height
+    , renderSquare model
+    ]
 
 
 renderSquare : Model -> V.Renderable
