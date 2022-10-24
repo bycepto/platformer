@@ -3,16 +3,15 @@ module Main exposing (main)
 -- import Canvas.Settings.Text as VW
 -- import Canvas.Texture as VT
 
+import App.Roller exposing (Roller)
 import Browser exposing (Document)
 import Browser.Events as BE
 import Canvas as V
 import Canvas.Settings as VS
-import Canvas.Settings.Advanced as VA
 import Color
 import Html as H
 import Html.Attributes as At
 import Keyboard as K
-import Keyboard.Arrows as KA
 
 
 
@@ -37,45 +36,20 @@ type alias Model =
     { -- game loop ticker
       tick : Float
 
-    -- roller
-    , position : V.Point
-
     -- keyboard
     , pressedKeys : List K.Key
+
+    -- roller
+    , roller : Roller
     }
 
 
 initModel : Model
 initModel =
-    { -- game loop ticker
-      tick = 0
-
-    -- roller
-    , position = initRollerPosition
-
-    -- keyboard
+    { tick = 0
     , pressedKeys = []
+    , roller = App.Roller.init height
     }
-
-
-initRollerPosition : V.Point
-initRollerPosition =
-    ( 25, height * 0.75 - rollerRadius )
-
-
-rollerRadius : Float
-rollerRadius =
-    25
-
-
-rollerRotation : Float -> Float
-rollerRotation x =
-    degrees (x * degreesPerTick)
-
-
-degreesPerTick : Float
-degreesPerTick =
-    3.0
 
 
 
@@ -113,31 +87,13 @@ update msg model =
 handleFrame : Model -> Model
 handleFrame model =
     model
-        |> applyKeyboardInputs
+        |> updateRoller
         |> incrementTick
 
 
-applyKeyboardInputs : Model -> Model
-applyKeyboardInputs model =
-    let
-        { x, y } =
-            KA.arrows model.pressedKeys
-    in
-    if x /= 0 then
-        { model
-            | position =
-                Tuple.mapFirst
-                    (\posX -> posX + toFloat x * rollerAccelerationX)
-                    model.position
-        }
-
-    else
-        model
-
-
-rollerAccelerationX : Float
-rollerAccelerationX =
-    3.0
+updateRoller : Model -> Model
+updateRoller model =
+    { model | roller = App.Roller.update model model.roller }
 
 
 incrementTick : { a | tick : Float } -> { a | tick : Float }
@@ -201,31 +157,7 @@ renderSquare model =
     V.group
         []
         [ renderFloor
-        , renderRoller model
-        ]
-
-
-renderRoller : Model -> V.Renderable
-renderRoller model =
-    let
-        ( cx, cy ) =
-            model.position
-    in
-    V.shapes
-        [ VS.fill Color.white
-        , VS.stroke Color.black
-
-        -- rotate
-        , VA.transform
-            [ VA.translate cx cy
-            , VA.rotate (rollerRotation <| Tuple.first model.position)
-            , VA.translate -cx -cy
-            ]
-        ]
-        [ V.circle ( cx, cy ) rollerRadius
-        , V.path ( cx, cy + (0.75 * rollerRadius) )
-            [ V.lineTo ( cx, cy + rollerRadius )
-            ]
+        , App.Roller.render model.roller
         ]
 
 
@@ -233,7 +165,7 @@ renderFloor : V.Renderable
 renderFloor =
     V.shapes
         [ VS.fill Color.grey ]
-        [ V.rect ( 0, height * 0.75 ) width 10 ]
+        [ V.rect ( 0, height * 0.75 ) width 1 ]
 
 
 width : number
