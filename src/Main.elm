@@ -45,7 +45,7 @@ initModel : Model
 initModel =
     { tick = 0
     , pressedKeys = []
-    , roller = App.Roller.init height
+    , roller = App.Roller.init
     , blocks =
         [ App.Block.init 25 150 100 30
         , App.Block.init 175 300 100 30

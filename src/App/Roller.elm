@@ -1,9 +1,5 @@
 module App.Roller exposing
-    (  Roller
-       -- , applyKeyboardInputs
-       -- , applyPhysics
-       -- , boundingBox
-
+    ( Roller
     , init
     , render
     , update
@@ -47,15 +43,11 @@ type alias Roller =
     }
 
 
-init : Float -> Roller
-init height =
+init : Roller
+init =
     { x = 75
-
-    -- , y = height * 0.75 - radius
     , y = 25
     , velX = 0
-
-    -- bootleg gravity
     , velY = 0
     , groundedAt = Nothing
     , walledAt = Nothing
@@ -195,7 +187,7 @@ collideWithBlock block roller =
         Nothing ->
             roller
 
-        Just { left, right, top, bottom } ->
+        Just { left, right, top } ->
             if top then
                 { roller | groundedAt = Just block.y }
 
@@ -255,13 +247,14 @@ render roller =
         (ballWithEyes roller)
 
 
-ballWithDash : Roller -> List V.Shape
-ballWithDash roller =
-    [ V.circle ( roller.x, roller.y ) radius
-    , V.path ( roller.x, roller.y + (0.75 * radius) )
-        [ V.lineTo ( roller.x, roller.y + radius )
-        ]
-    ]
+
+-- ballWithDash : Roller -> List V.Shape
+-- ballWithDash roller =
+--     [ V.circle ( roller.x, roller.y ) radius
+--     , V.path ( roller.x, roller.y + (0.75 * radius) )
+--         [ V.lineTo ( roller.x, roller.y + radius )
+--         ]
+--     ]
 
 
 ballWithEyes : Roller -> List V.Shape
