@@ -53,6 +53,8 @@ initModel =
         , App.Block.init 325 310 50 30
         , App.Block.init 400 300 50 30
         , App.Block.init 475 100 50 300
+        , App.Block.init -10 0 20 height
+        , App.Block.init (width - 10) 0 20 height
         ]
     }
 
