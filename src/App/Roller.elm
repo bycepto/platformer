@@ -23,6 +23,7 @@ type alias Env a =
     { a
         | pressedKeys : List K.Key
         , blocks : List Block
+        , tick : Float
     }
 
 
@@ -249,8 +250,8 @@ accelerationY =
 -- RENDER
 
 
-render : Roller -> V.Renderable
-render roller =
+render : Env a -> Roller -> V.Renderable
+render env roller =
     V.group
         [ VS.fill Color.white
         , VS.stroke Color.black
@@ -264,7 +265,7 @@ render roller =
             -- , VA.applyMatrix { m11 = 1.6, m12 = 0, m21 = 0, m22 = 1, dx = 0, dy = 0 }
             ]
         ]
-        [ renderBallWithEyes roller
+        [ renderBallWithEyes env roller
         ]
 
 
@@ -279,8 +280,8 @@ render roller =
 -- , VA.shadow { blur = 50, color = Color.red, offset = ( 0, 0 ) }
 
 
-renderBallWithEyes : Roller -> V.Renderable
-renderBallWithEyes roller =
+renderBallWithEyes : Env a -> Roller -> V.Renderable
+renderBallWithEyes _ roller =
     let
         renderEye =
             if roller.firingLaser then
@@ -292,6 +293,8 @@ renderBallWithEyes roller =
     V.group
         []
         [ renderBall roller
+
+        -- , renderMouth env roller
         , renderEye roller.x (roller.y + 0.35 * radius)
         , renderEye (roller.x + 0.75 * radius) (roller.y + 0.35 * radius)
         ]
@@ -300,6 +303,40 @@ renderBallWithEyes roller =
 renderBall : Roller -> V.Renderable
 renderBall { x, y } =
     V.shapes [] [ V.circle ( x, y ) radius ]
+
+
+renderMouth : Env a -> Roller -> V.Renderable
+renderMouth { tick } { x, y } =
+    V.shapes
+        []
+        [ V.path ( x - 10, y - 5 )
+            [ V.lineTo ( x, y - 10 )
+            , V.lineTo ( x + 5, y - 5 )
+            , V.lineTo ( x + 10, y - 10 )
+            , V.lineTo ( x + 15, y - 5 )
+            , V.lineTo ( x + 20, y - 10 )
+            , V.lineTo ( x + 25, y - 5 )
+            ]
+        , if modBy 2 (round tick // 8) == 0 then
+            V.path ( x - 10, y - 5 )
+                [ V.lineTo ( x, y - 20 )
+                , V.lineTo ( x + 5, y - 14 )
+                , V.lineTo ( x + 10, y - 20 )
+                , V.lineTo ( x + 15, y - 14 )
+                , V.lineTo ( x + 20, y - 20 )
+                , V.lineTo ( x + 25, y - 5 )
+                ]
+
+          else
+            V.path ( x - 10, y - 5 )
+                [ V.lineTo ( x, y - 18 )
+                , V.lineTo ( x + 5, y - 12 )
+                , V.lineTo ( x + 10, y - 18 )
+                , V.lineTo ( x + 15, y - 12 )
+                , V.lineTo ( x + 20, y - 18 )
+                , V.lineTo ( x + 25, y - 5 )
+                ]
+        ]
 
 
 renderNormalEye : Float -> Float -> V.Renderable

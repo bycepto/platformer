@@ -53,7 +53,6 @@ initModel =
         , App.Block.init 325 310 50 30
         , App.Block.init 400 300 50 30
         , App.Block.init 475 100 50 300
-
         ]
     }
 
@@ -164,7 +163,7 @@ render : Model -> List V.Renderable
 render model =
     List.concat
         [ [ V.clear ( 0, 0 ) width height
-          , App.Roller.render model.roller
+          , App.Roller.render model model.roller
           ]
         , List.map App.Block.render model.blocks
         ]
