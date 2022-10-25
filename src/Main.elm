@@ -1,7 +1,6 @@
 module Main exposing (main)
 
 import App.Block exposing (Block)
-import App.Collisions exposing (CollisionSides)
 import App.Roller exposing (Roller)
 import Browser exposing (Document)
 import Browser.Events as BE
@@ -48,9 +47,12 @@ initModel =
     , pressedKeys = []
     , roller = App.Roller.init height
     , blocks =
-        [ App.Block.init 25 150
-        , App.Block.init 125 250
-        , App.Block.init 250 300
+        [ App.Block.init 25 150 100 30
+        , App.Block.init 175 300 100 30
+
+        -- , App.Block.init 125 250
+        -- , App.Block.init 250 300
+        -- , App.Block.init 377 150
         ]
     }
 

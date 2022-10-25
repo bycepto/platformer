@@ -30,12 +30,20 @@ type alias Env a =
     }
 
 
+type WalledAt
+    = LeftX Float
+    | RightX Float
+      -- TODO: what does this mean? squished? is this even necessary?
+    | BothX Float Float
+
+
 type alias Roller =
     { x : Float
     , y : Float
     , velX : Float
     , velY : Float
     , groundedAt : Maybe Float
+    , walledAt : Maybe WalledAt
     }
 
 
@@ -50,6 +58,7 @@ init height =
     -- bootleg gravity
     , velY = 0
     , groundedAt = Nothing
+    , walledAt = Nothing
     }
 
 
@@ -82,7 +91,8 @@ update env roller =
     roller
         |> applyKeyboardInputs env
         |> collideWithBlocks env
-        |> applyGravity
+        |> applyWall
+        |> applyGravityOrFloor
         |> applyPhysics
 
 
@@ -106,8 +116,8 @@ applyKeyboardInputs { pressedKeys } roller =
         { roller | velX = 0 }
 
 
-applyGravity : Roller -> Roller
-applyGravity roller =
+applyGravityOrFloor : Roller -> Roller
+applyGravityOrFloor roller =
     case roller.groundedAt of
         Just groundY ->
             -- "climb" up ledge
@@ -115,6 +125,37 @@ applyGravity roller =
 
         Nothing ->
             { roller | velY = accelerationY }
+
+
+applyWall : Roller -> Roller
+applyWall roller =
+    case roller.walledAt of
+        Just (LeftX wallX) ->
+            { roller | velX = 0.5 * (wallX - rightX roller - 0.1) }
+
+        Just (RightX wallX) ->
+            { roller | velX = 0.5 * (wallX - leftX roller + 0.1) }
+
+        _ ->
+            roller
+
+
+leftX : Roller -> Float
+leftX roller =
+    let
+        { x } =
+            boundingBox roller
+    in
+    x
+
+
+rightX : Roller -> Float
+rightX roller =
+    let
+        { x, width } =
+            boundingBox roller
+    in
+    x + width
 
 
 bottomY : Roller -> Float
@@ -137,7 +178,15 @@ applyPhysics roller =
 
 collideWithBlocks : Env a -> Roller -> Roller
 collideWithBlocks { blocks } roller =
-    List.foldl collideWithBlock { roller | groundedAt = Nothing } blocks
+    List.foldl
+        collideWithBlock
+        (preCollisionRoller roller)
+        blocks
+
+
+preCollisionRoller : Roller -> Roller
+preCollisionRoller roller =
+    { roller | groundedAt = Nothing, walledAt = Nothing }
 
 
 collideWithBlock : Block -> Roller -> Roller
@@ -149,6 +198,19 @@ collideWithBlock block roller =
         Just { left, right, top, bottom } ->
             if top then
                 { roller | groundedAt = Just block.y }
+
+            else if left || right then
+                { roller
+                    | walledAt =
+                        if left && right then
+                            Just <| BothX block.x <| block.x + block.width
+
+                        else if left then
+                            Just <| LeftX block.x
+
+                        else
+                            Just <| RightX <| block.x + block.width
+                }
 
             else
                 roller
