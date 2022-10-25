@@ -49,10 +49,11 @@ initModel =
     , blocks =
         [ App.Block.init 25 150 100 30
         , App.Block.init 175 300 100 30
+        , App.Block.init 275 285 50 30
+        , App.Block.init 325 310 50 30
+        , App.Block.init 400 300 50 30
+        , App.Block.init 475 100 50 300
 
-        -- , App.Block.init 125 250
-        -- , App.Block.init 250 300
-        -- , App.Block.init 377 150
         ]
     }
 
