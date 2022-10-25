@@ -40,6 +40,7 @@ type alias Roller =
     , velY : Float
     , groundedAt : Maybe Float
     , walledAt : Maybe WalledAt
+    , firingLaser : Bool
     }
 
 
@@ -51,6 +52,7 @@ init =
     , velY = 0
     , groundedAt = Nothing
     , walledAt = Nothing
+    , firingLaser = False
     }
 
 
@@ -71,7 +73,11 @@ degreesPerMove =
 
 boundingBox : Roller -> BoundingBox
 boundingBox { x, y } =
-    BoundingBox (x - radius) (y - radius) (radius * 2) (radius * 2)
+    BoundingBox
+        (x - radius)
+        (y - radius)
+        (radius * 2)
+        (radius * 2)
 
 
 
@@ -89,7 +95,14 @@ update env roller =
 
 
 applyKeyboardInputs : Env a -> Roller -> Roller
-applyKeyboardInputs { pressedKeys } roller =
+applyKeyboardInputs env roller =
+    roller
+        |> applyKeyboardInputsDirections env
+        |> applyKeyboardInputsLaser env
+
+
+applyKeyboardInputsDirections : Env a -> Roller -> Roller
+applyKeyboardInputsDirections { pressedKeys } roller =
     let
         { x } =
             KA.arrows pressedKeys
@@ -106,6 +119,11 @@ applyKeyboardInputs { pressedKeys } roller =
 
     else
         { roller | velX = 0 }
+
+
+applyKeyboardInputsLaser : Env a -> Roller -> Roller
+applyKeyboardInputsLaser { pressedKeys } roller =
+    { roller | firingLaser = List.member K.Spacebar pressedKeys }
 
 
 applyGravityOrFloor : Roller -> Roller
@@ -233,7 +251,7 @@ accelerationY =
 
 render : Roller -> V.Renderable
 render roller =
-    V.shapes
+    V.group
         [ VS.fill Color.white
         , VS.stroke Color.black
 
@@ -242,9 +260,12 @@ render roller =
             [ VA.translate roller.x roller.y
             , VA.rotate (rotation roller.x)
             , VA.translate -roller.x -roller.y
+
+            -- , VA.applyMatrix { m11 = 1.6, m12 = 0, m21 = 0, m22 = 1, dx = 0, dy = 0 }
             ]
         ]
-        (ballWithEyes roller)
+        [ renderBallWithEyes roller
+        ]
 
 
 
@@ -255,11 +276,47 @@ render roller =
 --         [ V.lineTo ( roller.x, roller.y + radius )
 --         ]
 --     ]
+-- , VA.shadow { blur = 50, color = Color.red, offset = ( 0, 0 ) }
 
 
-ballWithEyes : Roller -> List V.Shape
-ballWithEyes roller =
-    [ V.circle ( roller.x, roller.y ) radius
-    , V.circle ( roller.x, roller.y + (0.35 * radius) ) 3
-    , V.circle ( roller.x + (0.75 * radius), roller.y + (0.35 * radius) ) 3
-    ]
+renderBallWithEyes : Roller -> V.Renderable
+renderBallWithEyes roller =
+    let
+        renderEye =
+            if roller.firingLaser then
+                renderLaserEye
+
+            else
+                renderNormalEye
+    in
+    V.group
+        []
+        [ renderBall roller
+        , renderEye roller.x (roller.y + 0.35 * radius)
+        , renderEye (roller.x + 0.75 * radius) (roller.y + 0.35 * radius)
+        ]
+
+
+renderBall : Roller -> V.Renderable
+renderBall { x, y } =
+    V.shapes [] [ V.circle ( x, y ) radius ]
+
+
+renderNormalEye : Float -> Float -> V.Renderable
+renderNormalEye x y =
+    V.shapes
+        []
+        [ V.circle ( x, y ) 3
+        ]
+
+
+renderLaserEye : Float -> Float -> V.Renderable
+renderLaserEye x y =
+    V.shapes
+        [ VA.shadow { blur = 5, color = Color.red, offset = ( 0, 0 ) }
+        , VS.stroke Color.red
+        ]
+        [ V.circle ( x, y ) 3
+        , V.path ( x, y )
+            [ V.lineTo ( x + 1000, y + 500 ) ]
+        ]
