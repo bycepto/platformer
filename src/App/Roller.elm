@@ -1,13 +1,16 @@
 module App.Roller exposing
-    ( Roller
-    , applyKeyboardInputs
-    , applyPhysics
-    , boundingBox
+    (  Roller
+       -- , applyKeyboardInputs
+       -- , applyPhysics
+       -- , boundingBox
+
     , init
     , render
+    , update
     )
 
-import App.Collisions exposing (BoundingBox)
+import App.Block exposing (Block)
+import App.Collisions exposing (BoundingBox, CollisionSides)
 import Canvas as V
 import Canvas.Settings as VS
 import Canvas.Settings.Advanced as VA
@@ -23,6 +26,7 @@ import Keyboard.Arrows as KA
 type alias Env a =
     { a
         | pressedKeys : List K.Key
+        , blocks : List Block
     }
 
 
@@ -31,6 +35,7 @@ type alias Roller =
     , y : Float
     , velX : Float
     , velY : Float
+    , groundedAt : Maybe Float
     }
 
 
@@ -43,7 +48,8 @@ init height =
     , velX = 0
 
     -- bootleg gravity
-    , velY = 1
+    , velY = 0
+    , groundedAt = Nothing
     }
 
 
@@ -71,14 +77,23 @@ boundingBox { x, y } =
 -- UPDATE
 
 
+update : Env a -> Roller -> Roller
+update env roller =
+    roller
+        |> applyKeyboardInputs env
+        |> collideWithBlocks env
+        |> applyGravity
+        |> applyPhysics
+
+
 applyKeyboardInputs : Env a -> Roller -> Roller
-applyKeyboardInputs env roller =
+applyKeyboardInputs { pressedKeys } roller =
     let
         { x } =
-            KA.arrows env.pressedKeys
+            KA.arrows pressedKeys
 
         speedModifier =
-            if List.member K.Shift env.pressedKeys then
+            if List.member K.Shift pressedKeys then
                 0.5
 
             else
@@ -91,6 +106,26 @@ applyKeyboardInputs env roller =
         { roller | velX = 0 }
 
 
+applyGravity : Roller -> Roller
+applyGravity roller =
+    case roller.groundedAt of
+        Just groundY ->
+            -- "climb" up ledge
+            { roller | velY = 0.5 * (groundY - bottomY roller) }
+
+        Nothing ->
+            { roller | velY = accelerationY }
+
+
+bottomY : Roller -> Float
+bottomY roller =
+    let
+        { y, height } =
+            boundingBox roller
+    in
+    y + height
+
+
 applyPhysics : Roller -> Roller
 applyPhysics roller =
     -- TODO: don't wrap, this is just for testing
@@ -100,9 +135,42 @@ applyPhysics roller =
     }
 
 
+collideWithBlocks : Env a -> Roller -> Roller
+collideWithBlocks { blocks } roller =
+    List.foldl collideWithBlock { roller | groundedAt = Nothing } blocks
+
+
+collideWithBlock : Block -> Roller -> Roller
+collideWithBlock block roller =
+    case collideWithBlockSides block roller of
+        Nothing ->
+            roller
+
+        Just { left, right, top, bottom } ->
+            if top then
+                { roller | groundedAt = Just block.y }
+
+            else
+                roller
+
+
+collideWithBlockSides : Block -> Roller -> Maybe CollisionSides
+collideWithBlockSides block roller =
+    App.Collisions.collision
+        (boundingBox roller)
+        (App.Block.boundingBox block)
+
+
 accelerationX : Float
 accelerationX =
     3.0
+
+
+{-| bootleg gravity
+-}
+accelerationY : Float
+accelerationY =
+    1.0
 
 
 

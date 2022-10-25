@@ -90,89 +90,13 @@ update msg model =
 handleFrame : Model -> Model
 handleFrame model =
     model
-        |> updateRollerInputs
-        |> handleCollisions
-        |> updateRollerPhysics
+        |> updateRoller
         |> incrementTick
 
 
-handleCollisions : Model -> Model
-handleCollisions model =
-    { model | roller = handleCollisionWithBlocks model.roller model.blocks }
-
-
-handleCollisionWithBlocks : Roller -> List Block -> Roller
-handleCollisionWithBlocks roller blocks =
-    case anyCollisionSides roller blocks of
-        Nothing ->
-            -- bootleg gravity
-            { roller | velY = 1 }
-
-        Just { left, right, top, bottom } ->
-            let
-                sides_ =
-                    Debug.log "sides" { left = left, right = right, top = top, bottom = bottom }
-            in
-            { roller
-                | velX =
-                    if left && not top then
-                        min roller.velX 0
-
-                    else if right && not top then
-                        max roller.velX 0
-
-                    else
-                        roller.velX
-                , velY =
-                    if top then
-                        min roller.velY 0
-
-                    else if bottom then
-                        max roller.velY 0
-
-                    else
-                        roller.velY
-            }
-
-
-anyCollisionSides : Roller -> List Block -> Maybe CollisionSides
-anyCollisionSides roller blocks =
-    case mapCollisionSides roller blocks of
-        [] ->
-            Nothing
-
-        sides :: rest ->
-            Just <|
-                List.foldl
-                    (\side acc ->
-                        { left = acc.left || side.left
-                        , right = acc.right || side.right
-                        , top = acc.top || side.top
-                        , bottom = acc.bottom || side.bottom
-                        }
-                    )
-                    sides
-                    rest
-
-
-mapCollisionSides : Roller -> List Block -> List CollisionSides
-mapCollisionSides roller blocks =
-    List.filterMap (collisionSides roller) blocks
-
-
-collisionSides : Roller -> Block -> Maybe CollisionSides
-collisionSides roller block =
-    App.Collisions.collision (App.Roller.boundingBox roller) (App.Block.boundingBox block)
-
-
-updateRollerInputs : Model -> Model
-updateRollerInputs model =
-    { model | roller = App.Roller.applyKeyboardInputs model model.roller }
-
-
-updateRollerPhysics : Model -> Model
-updateRollerPhysics model =
-    { model | roller = App.Roller.applyPhysics model.roller }
+updateRoller : Model -> Model
+updateRoller model =
+    { model | roller = App.Roller.update model model.roller }
 
 
 incrementTick : { a | tick : Float } -> { a | tick : Float }
