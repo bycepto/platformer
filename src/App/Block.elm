@@ -1,8 +1,15 @@
-module App.Block exposing (Block, boundingBox, init, render)
+module App.Block exposing
+    ( Block
+    , boundingBox
+    , init
+    , initMoving
+    , move
+    , render
+    )
 
-import App.Collisions exposing (BoundingBox)
 import Canvas as V
 import Canvas.Settings as VS
+import Collision as CL
 import Color
 
 
@@ -15,7 +22,12 @@ type alias Block =
     , y : Float
     , width : Float
     , height : Float
+    , movement : Maybe Movement
     }
+
+
+type Movement
+    = Vertical Float Float Bool
 
 
 init : Float -> Float -> Float -> Float -> Block
@@ -24,12 +36,66 @@ init x y width height =
     , y = y
     , width = width
     , height = height
+    , movement = Nothing
     }
 
 
-boundingBox : Block -> BoundingBox
-boundingBox =
-    identity
+initMoving : Float -> Float -> Float -> Float -> Block
+initMoving x y width height =
+    { x = x
+    , y = y
+    , width = width
+    , height = height
+    , movement = Just <| Vertical (y - 10) (y + 10) True
+    }
+
+
+boundingBox : Block -> CL.Rectangle
+boundingBox { x, y, width, height } =
+    { x = x
+    , y = y
+    , width = width
+    , height = height
+    }
+
+
+
+-- UPDATE
+
+
+move : Block -> Block
+move block =
+    case block.movement of
+        Nothing ->
+            block
+
+        Just (Vertical minY maxY goingDown) ->
+            if goingDown && block.y >= maxY then
+                { block | movement = Just <| Vertical minY maxY False }
+
+            else if not goingDown && block.y <= minY then
+                { block | movement = Just <| Vertical minY maxY True }
+
+            else
+                { block
+                    | y =
+                        block.y
+                            + moveStep
+                            * (if goingDown then
+                                1.0
+
+                               else
+                                -1.0
+                              )
+                }
+
+
+{-| How fast a block moves
+-}
+moveStep : Float
+moveStep =
+    -- TODO: make this a parameter
+    0.2
 
 
 
