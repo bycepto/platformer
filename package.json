@@ -16,7 +16,7 @@
   "dependencies": {
     "elm-canvas": "^2.2.4"
   },
-  "homepage": "https://maximpertsov.github.io",
+  "homepage": "https://charming-dango-787095.netlify.app",
   "browserslist": {
     "production": [
       ">0.2%",
