@@ -41,17 +41,11 @@ type alias Roller =
     , angle : Float
     , velX : Float
     , velY : Float
-    , groundedAt : Maybe Float
-    , walledAt : Maybe WalledAt
+    , obstaclesToLeft : List CL.Rectangle
+    , obstaclesToRight : List CL.Rectangle
+    , obstaclesBelow : List CL.Rectangle
     , firingLaser : Bool
     }
-
-
-type WalledAt
-    = LeftX Float
-    | RightX Float
-      -- TODO: what does this mean? squished? is this even necessary?
-    | BothX Float Float
 
 
 init : Roller
@@ -61,8 +55,9 @@ init =
     , angle = 0
     , velX = 0
     , velY = 0
-    , groundedAt = Nothing
-    , walledAt = Nothing
+    , obstaclesToLeft = []
+    , obstaclesToRight = []
+    , obstaclesBelow = []
     , firingLaser = False
     }
 
@@ -79,22 +74,10 @@ degreesPerMove =
 
 circle : Roller -> CL.Circle
 circle { x, y } =
-    {- TODO:
-       make this platform bounding box, but use a different bounding box
-       or collision methods for enemies.
-    -}
-    -- CL.Rectangle
-    --     (x - radius + boundingBoxXPadding)
-    --     (y - radius)
-    --     (radius * 2 - boundingBoxXPadding * 2)
-    --     (radius * 2)
     CL.toCircle ( x, y ) radius
 
 
 
--- boundingBoxXPadding : Float
--- boundingBoxXPadding =
---     10
 -- UPDATE
 
 
@@ -102,10 +85,9 @@ update : Env a -> Roller -> Roller
 update env roller =
     roller
         |> applyKeyboardInputs env
-        |> collideWithBlocks env
-        |> applyWall
-        |> applyGravityOrFloor
-        |> applyPhysics
+        |> detectBlockCollisions env
+        |> applyVelX
+        |> applyVelY
 
 
 applyKeyboardInputs : Env a -> Roller -> Roller
@@ -159,78 +141,101 @@ applyKeyboardInputsLaser { pressedKeys } roller =
     { roller | firingLaser = List.member K.Spacebar pressedKeys }
 
 
-applyGravityOrFloor : Roller -> Roller
-applyGravityOrFloor roller =
-    case roller.groundedAt of
-        Just groundY ->
-            -- let
-            --     _ =
-            --         Debug.log "ground" "ground"
-            -- in
-            { roller | y = groundY - radius }
+applyVelX : Roller -> Roller
+applyVelX roller =
+    if roller.velX < 0 then
+        case
+            roller.obstaclesToLeft
+                |> List.filter (not << canClimbUp roller)
+                |> List.map CL.right
+                |> List.maximum
+        of
+            Nothing ->
+                { roller | x = roller.x + roller.velX }
 
+            Just x ->
+                { roller | x = x + radius }
+
+    else if roller.velX > 0 then
+        case
+            roller.obstaclesToRight
+                |> List.filter (not << canClimbUp roller)
+                |> List.map CL.left
+                |> List.minimum
+        of
+            Nothing ->
+                { roller | x = roller.x + roller.velX }
+
+            Just x ->
+                { roller | x = x - radius }
+
+    else
+        roller
+
+
+applyVelY : Roller -> Roller
+applyVelY roller =
+    case
+        roller.obstaclesBelow
+            |> List.filterMap (getGroundPoint roller)
+            |> List.minimum
+    of
         Nothing ->
-            -- let
-            --     _ =
-            --         Debug.log "gravity" "gravity"
-            -- in
-            { roller | velY = accelerationY }
+            fall roller
+
+        Just y ->
+            { roller | y = y - radius + 1 }
 
 
-applyWall : Roller -> Roller
-applyWall roller =
-    case roller.walledAt of
-        Just (LeftX wallX) ->
-            { roller | velX = 0.5 * (wallX - rightX roller - 0.1) }
+{-| Assuming that the roller has collided with the top of the given rectangle,
+return where the lowest point of the circle should be.
+-}
+getGroundPoint : Roller -> CL.Rectangle -> Maybe Float
+getGroundPoint roller rect =
+    if roller.x < CL.left rect then
+        if roller.x + radius - hangXThreshold < CL.left rect then
+            -- too far off
+            Nothing
 
-        Just (RightX wallX) ->
-            { roller | velX = 0.5 * (wallX - leftX roller + 0.1) }
+        else
+            -- hang off the left side of the rectangle
+            let
+                th =
+                    atan2 (CL.top rect - roller.y) (CL.left rect - roller.x)
+            in
+            Just <| CL.top rect + radius * (1 - sin th)
 
-        _ ->
-            -- TODO: what about BothX?
-            roller
+    else if roller.x > CL.right rect then
+        if roller.x - radius + hangXThreshold > CL.right rect then
+            -- too far off
+            Nothing
+
+        else
+            -- hang off the right side of the rectangle
+            let
+                th =
+                    atan2 (CL.top rect - roller.y) (CL.right rect - roller.x)
+            in
+            Just <| CL.top rect + radius * (1 - sin th)
+
+    else
+        -- no hanging
+        Just <| CL.top rect
 
 
-leftX : Roller -> Float
-leftX { x } =
-    x - radius
+hangXThreshold : Float
+hangXThreshold =
+    3
 
 
-rightX : Roller -> Float
-rightX { x } =
-    x + radius
+fall : Roller -> Roller
+fall roller =
+    { roller | y = toFloat <| modBy 480 <| round <| roller.y + accelerationY }
 
 
-applyPhysics : Roller -> Roller
-applyPhysics roller =
-    -- TODO: don't wrap, this is just for testing
-    { roller
-        | x = roller.x + roller.velX
-        , y = toFloat <| modBy 480 (round <| roller.y + roller.velY)
-    }
-
-
-collideWithBlocks : Env a -> Roller -> Roller
-collideWithBlocks { blocks } roller =
-    -- let
-    --     result =
-    --         List.foldl
-    --             collideWithBlock
-    --             (preCollisionRoller roller)
-    --             -- TODO: can we make the logic below work without sorting the blocks
-    --             -- from lowest to highest?
-    --             (List.sortBy (negate << .y) blocks)
-    --
-    --     _ =
-    --         Debug.log "GROUNDED AT" result.groundedAt
-    -- in
-    -- result
-    List.foldl
-        collideWithBlock
-        (preCollisionRoller roller)
-        -- TODO: can we make the logic below work without sorting the blocks
-        -- from lowest to highest?
-        (List.sortBy (negate << .y) blocks)
+detectBlockCollisions : Env a -> Roller -> Roller
+detectBlockCollisions { blocks } roller =
+    List.foldl collideWithBlock (preCollisionRoller roller) blocks
 
 
 
@@ -239,7 +244,11 @@ collideWithBlocks { blocks } roller =
 
 preCollisionRoller : Roller -> Roller
 preCollisionRoller roller =
-    { roller | groundedAt = Nothing, walledAt = Nothing }
+    { roller
+        | obstaclesBelow = []
+        , obstaclesToLeft = []
+        , obstaclesToRight = []
+    }
 
 
 collideWithBlock : Block -> Roller -> Roller
@@ -250,120 +259,46 @@ collideWithBlock block roller =
 
         Just sides ->
             roller
-                |> collideWithBlockTop block sides
                 |> collideWithBlockLeft block sides
                 |> collideWithBlockRight block sides
+                |> collideWithBlockTop block sides
 
 
 collideWithBlockTop : Block -> CL.RectanglesInfo -> Roller -> Roller
 collideWithBlockTop block { top } roller =
-    if not top then
-        -- let
-        --     _ =
-        --         Debug.log "NOT TOP" ""
-        -- in
-        roller
-
-    else if canClimbUp block roller then
-        -- TODO: can we make the logic below work without sorting the blocks
-        -- from lowest to highest?
-        { roller | groundedAt = Just block.y }
+    if top then
+        { roller | obstaclesBelow = App.Block.boundingBox block :: roller.obstaclesBelow }
 
     else
-        -- let
-        --     _ =
-        --         Debug.log "CANNOT CLIMB" ""
-        -- in
         roller
 
 
 collideWithBlockLeft : Block -> CL.RectanglesInfo -> Roller -> Roller
 collideWithBlockLeft block { left } roller =
-    -- collideWithBlockLeft block { left, top } roller =
-    if not left then
-        roller
-
-    else if canClimbUp block roller then
-        -- { roller | groundedAt = groundOffEdge block top roller }
-        { roller | groundedAt = Just block.y }
+    if left then
+        { roller | obstaclesToRight = App.Block.boundingBox block :: roller.obstaclesToRight }
 
     else
-        updateWalledAtWith (LeftX block.x) roller
+        roller
 
 
 collideWithBlockRight : Block -> CL.RectanglesInfo -> Roller -> Roller
 collideWithBlockRight block { right } roller =
-    -- collideWithBlockRight block { right, top } roller =
-    if not right then
+    if right then
+        { roller | obstaclesToLeft = App.Block.boundingBox block :: roller.obstaclesToLeft }
+
+    else
         roller
 
-    else if canClimbUp block roller then
-        -- { roller | groundedAt = groundOffEdge block top roller }
-        { roller | groundedAt = Just block.y }
 
-    else
-        updateWalledAtWith (RightX <| block.x + block.width) roller
-
-
-groundOffEdge : Block -> Bool -> Roller -> Maybe Float
-groundOffEdge block onTop roller =
-    -- TODO: handle case where ball hangs off one side?
-    -- combine both steps?
-    if not onTop then
-        Nothing
-
-    else if roller.x < block.x then
-        let
-            th =
-                -- Debug.log "theta" <|
-                atan2 (block.y - roller.y) (block.x - roller.x)
-        in
-        Just <| block.y + radius * (1 - sin th)
-
-    else if roller.x > block.x + block.width then
-        let
-            th =
-                -- Debug.log "theta" <|
-                atan2 (block.y - roller.y) (block.x + block.width - roller.x)
-        in
-        Just <| block.y + radius * (1 - sin th)
-
-    else
-        Just <| block.y
-
-
-updateWalledAtWith : WalledAt -> Roller -> Roller
-updateWalledAtWith walledAt roller =
-    case ( walledAt, roller.walledAt ) of
-        ( LeftX lx, Just (RightX rx) ) ->
-            { roller | walledAt = Just <| BothX lx rx }
-
-        ( RightX rx, Just (LeftX lx) ) ->
-            { roller | walledAt = Just <| BothX lx rx }
-
-        ( LeftX lx, Just (BothX _ rx) ) ->
-            { roller | walledAt = Just <| BothX lx rx }
-
-        ( RightX rx, Just (BothX lx _) ) ->
-            { roller | walledAt = Just <| BothX lx rx }
-
-        _ ->
-            { roller | walledAt = Just walledAt }
-
-
-canClimbUp : Block -> Roller -> Bool
-canClimbUp block roller =
-    case roller.groundedAt of
-        Nothing ->
-            roller.y + radius - block.y < canClimbUpThreshold
-
-        Just groundedAt ->
-            groundedAt - block.y < canClimbUpThreshold
+canClimbUp : Roller -> CL.Rectangle -> Bool
+canClimbUp roller rect =
+    roller.y + radius - rect.y < canClimbUpThreshold
 
 
 canClimbUpThreshold : Float
 canClimbUpThreshold =
-    27
+    20
 
 
 collideWithBlockSides : Block -> Roller -> Maybe CL.RectanglesInfo

@@ -8,9 +8,12 @@ module Collision exposing
     , detectLineCircle
     , detectLineCircleInfo
     , detectRectsInfo
+    , left
+    , right
     , toCircle
     , toLineSegment
     , toPoint
+    , top
     )
 
 {-| This module implements collision detection between a variety of shapes.
@@ -123,6 +126,12 @@ bottom { y, height } =
     y + height
 
 
+
+-- squishX : Float -> Rectangle -> Rectangle
+-- squishX val rect =
+--     { rect | x = rect.x + val, width = rect.width - val }
+
+
 type alias RectanglesInfo =
     { top : Bool
     , bottom : Bool
@@ -226,6 +235,10 @@ detectRects rect1 rect2 =
         && (right rect1 > left rect2)
         && (top rect1 < bottom rect2)
         && (bottom rect1 > top rect2)
+
+
+
+-- Circle / Rectangle
 
 
 detectCircleRectInfo : Circle -> Rectangle -> Maybe RectanglesInfo
