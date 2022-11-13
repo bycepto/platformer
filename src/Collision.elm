@@ -4,9 +4,11 @@ module Collision exposing
     , Point
     , Rectangle
     , RectanglesInfo
+    , detectCircleRect
     , detectCircleRectInfo
     , detectLineCircle
     , detectLineCircleInfo
+    , detectRects
     , detectRectsInfo
     , left
     , right

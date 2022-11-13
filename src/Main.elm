@@ -2,11 +2,15 @@ module Main exposing (main)
 
 import App.Block exposing (Block)
 import App.Enemy exposing (Enemy)
+import App.Lava exposing (Lava)
 import App.Roller exposing (Laser, Roller)
 import Browser exposing (Document)
 import Browser.Events as BE
 import Canvas as V
+import Canvas.Settings as VS
+import Canvas.Settings.Advanced as VA
 import Collision as CL
+import Color
 import Html as H
 import Html.Attributes as At
 import Keyboard as K
@@ -32,6 +36,7 @@ main =
 
 type alias Model =
     { -- game loop ticker
+      -- TODO: can this be an integer instead?
       tick : Float
 
     -- keyboard
@@ -41,7 +46,10 @@ type alias Model =
     , roller : Roller
     , lasers : List Laser
     , enemy : Enemy
+
+    -- obstacles
     , blocks : List Block
+    , lava : List Lava
 
     -- flags
     , devMode : Bool
@@ -67,6 +75,9 @@ initModel flags =
         , App.Block.init 475 300 50 100
         , App.Block.init -10 0 20 height
         , App.Block.init (width - 10) 0 20 height
+        ]
+    , lava =
+        [ App.Lava.initMoving 0 400 width height
         ]
     , devMode = flags.devMode
     }
@@ -222,7 +233,10 @@ updateEnemyLaserCollisions model =
 
 updateBlocks : Model -> Model
 updateBlocks model =
-    { model | blocks = List.map App.Block.move model.blocks }
+    { model
+        | blocks = List.map App.Block.move model.blocks
+        , lava = List.map App.Lava.move model.lava
+    }
 
 
 incrementTick : { a | tick : Float } -> { a | tick : Float }
@@ -287,13 +301,14 @@ render : Model -> List V.Renderable
 render model =
     List.concat
         [ [ V.clear ( 0, 0 ) width height
-          , App.Roller.render model model.roller
           ]
         , List.map App.Block.render model.blocks
-        , List.map App.Roller.renderLaser model.lasers
+        , List.map App.Lava.render model.lava
+        , [ App.Roller.render model model.roller ]
 
         -- TODO: this is a hack - we render enemies after lasers so
         -- the laser appear behind them.
+        , List.map App.Roller.renderLaser model.lasers
         , [ App.Enemy.render model model.enemy
           ]
         ]

@@ -7,13 +7,12 @@ module App.Enemy exposing
     )
 
 import App.Block exposing (Block)
+import App.Lava exposing (Lava)
 import Canvas as V
 import Canvas.Settings as VS
 import Canvas.Settings.Advanced as VA
 import Collision as CL
 import Color
-import Keyboard as K
-import Keyboard.Arrows as KA
 
 
 
@@ -22,8 +21,8 @@ import Keyboard.Arrows as KA
 
 type alias Env a =
     { a
-        | pressedKeys : List K.Key
-        , blocks : List Block
+        | blocks : List Block
+        , lava : List Lava
         , tick : Float
         , devMode : Bool
     }
@@ -44,7 +43,10 @@ type alias Enemy =
     , velY : Float
     , groundedAt : Maybe Float
     , walledAt : Maybe WalledAt
+
+    -- TODO: consider making these states
     , firingLaser : Bool
+    , deadAtTick : Maybe Float
     }
 
 
@@ -58,6 +60,7 @@ init =
     , groundedAt = Nothing
     , walledAt = Nothing
     , firingLaser = False
+    , deadAtTick = Nothing
     }
 
 
@@ -100,47 +103,30 @@ boundingBoxXPadding =
 
 update : Env a -> Enemy -> Enemy
 update env roller =
-    roller
-        -- |> applyKeyboardInputs env
-        |> collideWithBlocks env
-        |> applyWall
-        |> applyGravityOrFloor
-        |> applyPhysics
-
-
-applyKeyboardInputs : Env a -> Enemy -> Enemy
-applyKeyboardInputs env roller =
-    roller
-        |> applyKeyboardInputsDirections env
-        |> applyKeyboardInputsLaser env
-
-
-applyKeyboardInputsDirections : Env a -> Enemy -> Enemy
-applyKeyboardInputsDirections { pressedKeys } roller =
-    let
-        { x } =
-            KA.arrows pressedKeys
-
-        speedModifier =
-            if List.member K.Shift pressedKeys then
-                0.5
-
-            else
-                1
-    in
-    if x /= 0 then
-        { roller
-            | velX = toFloat x * accelerationX * speedModifier
-            , angle = roller.angle + degreesPerMove * toFloat x * accelerationX * speedModifier
-        }
+    if roller.deadAtTick /= Nothing then
+        roller
 
     else
-        { roller | velX = 0 }
+        roller
+            |> collideWithBlocks env
+            |> applyWall
+            |> applyGravityOrFloor
+            |> applyPhysics
+            |> collideWithLava env
 
 
-applyKeyboardInputsLaser : Env a -> Enemy -> Enemy
-applyKeyboardInputsLaser { pressedKeys } roller =
-    { roller | firingLaser = List.member K.Spacebar pressedKeys }
+collideWithLava : Env a -> Enemy -> Enemy
+collideWithLava { tick, lava } enemy =
+    if List.any (dectectLavaCollision enemy) lava then
+        { enemy | deadAtTick = Just tick }
+
+    else
+        enemy
+
+
+dectectLavaCollision : Enemy -> Lava -> Bool
+dectectLavaCollision enemy lava =
+    CL.detectRects (App.Lava.boundingBox lava) (boundingBox enemy)
 
 
 applyGravityOrFloor : Enemy -> Enemy
@@ -325,11 +311,15 @@ accelerationY =
 
 render : Env a -> Enemy -> V.Renderable
 render env roller =
-    V.group
-        []
-        [ renderRollingBallWithEyes env roller
-        , renderBoundingBox env roller
-        ]
+    if roller.deadAtTick /= Nothing then
+        V.group [] [ renderExplosion env roller ]
+
+    else
+        V.group
+            []
+            [ renderRollingBallWithEyes env roller
+            , renderBoundingBox env roller
+            ]
 
 
 renderBoundingBox : Env a -> Enemy -> V.Renderable
@@ -458,3 +448,60 @@ renderLaserEye x y =
         , V.path ( line.x1, line.y1 )
             [ V.lineTo ( line.x2, line.y2 ) ]
         ]
+
+
+renderExplosion : Env a -> Enemy -> V.Renderable
+renderExplosion env enemy =
+    case enemy.deadAtTick of
+        Nothing ->
+            V.group [] []
+
+        Just tick ->
+            if env.tick > tick + toFloat explosionDuration then
+                V.group [] []
+
+            else
+                V.group
+                    []
+                    [ renderExplosionParticle ( enemy.x, enemy.y ) 1 1 (env.tick - tick)
+                    , renderExplosionParticle ( enemy.x, enemy.y ) 1 -1 (env.tick - tick)
+                    , renderExplosionParticle ( enemy.x, enemy.y ) -1 -1 (env.tick - tick)
+                    , renderExplosionParticle ( enemy.x, enemy.y ) -1 1 (env.tick - tick)
+                    , renderExplosionParticle ( enemy.x, enemy.y ) 2 -1 (env.tick - tick)
+                    , renderExplosionParticle ( enemy.x, enemy.y ) -1 -2 (env.tick - tick)
+                    , renderExplosionParticle ( enemy.x, enemy.y ) -1 2 (env.tick - tick)
+                    , renderExplosionParticle ( enemy.x, enemy.y ) -3 2 (env.tick - tick)
+                    , renderExplosionParticle ( enemy.x, enemy.y ) -3 10 (env.tick - tick)
+                    , renderExplosionParticle ( enemy.x, enemy.y ) -10 2 (env.tick - tick)
+                    ]
+
+
+explosionDuration : Int
+explosionDuration =
+    50
+
+
+renderExplosionParticle : V.Point -> Float -> Float -> Float -> V.Renderable
+renderExplosionParticle ( x, y ) velX velY tick =
+    let
+        size =
+            10
+
+        rotationPerTick =
+            10
+    in
+    V.shapes
+        [ VS.fill Color.white
+        , VS.stroke Color.green
+        , VA.alpha <| (100 - 1.5 * tick) / 100
+        , VA.transform
+            [ VA.translate
+                (x + size / 2 + velX * tick)
+                (y + size / 2 + velY * tick)
+            , VA.rotate (degrees <| tick * rotationPerTick)
+            , VA.translate
+                -(x + size / 2)
+                -(y + size / 2)
+            ]
+        ]
+        [ V.rect ( x, y ) 10 10 ]

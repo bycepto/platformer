@@ -9,7 +9,7 @@ module App.Roller exposing
     )
 
 import App.Block exposing (Block)
-import App.Enemy exposing (Enemy)
+import App.Lava exposing (Lava)
 import Canvas as V
 import Canvas.Settings as VS
 import Canvas.Settings.Advanced as VA
@@ -27,11 +27,9 @@ type alias Env a =
     { a
         | pressedKeys : List K.Key
         , blocks : List Block
+        , lava : List Lava
         , tick : Float
         , devMode : Bool
-
-        -- TODO: hack! remove
-        , enemy : Enemy
     }
 
 
@@ -45,6 +43,7 @@ type alias Roller =
     , obstaclesToRight : List CL.Rectangle
     , obstaclesBelow : List CL.Rectangle
     , firingLaser : Bool
+    , deadAtTick : Maybe Float
     }
 
 
@@ -59,6 +58,7 @@ init =
     , obstaclesToRight = []
     , obstaclesBelow = []
     , firingLaser = False
+    , deadAtTick = Nothing
     }
 
 
@@ -83,11 +83,30 @@ circle { x, y } =
 
 update : Env a -> Roller -> Roller
 update env roller =
-    roller
-        |> applyKeyboardInputs env
-        |> detectBlockCollisions env
-        |> applyVelX
-        |> applyVelY
+    if roller.deadAtTick /= Nothing then
+        roller
+
+    else
+        roller
+            |> applyKeyboardInputs env
+            |> detectBlockCollisions env
+            |> applyVelX
+            |> applyVelY
+            |> collideWithLava env
+
+
+collideWithLava : Env a -> Roller -> Roller
+collideWithLava { tick, lava } roller =
+    if List.any (dectectLavaCollision roller) lava then
+        { roller | deadAtTick = Just tick }
+
+    else
+        roller
+
+
+dectectLavaCollision : Roller -> Lava -> Bool
+dectectLavaCollision roller lava =
+    CL.detectCircleRect (circle roller) (App.Lava.boundingBox lava)
 
 
 applyKeyboardInputs : Env a -> Roller -> Roller
@@ -348,7 +367,11 @@ render env roller =
 
           else
             V.text [] ( 0, 0 ) ""
-        , renderRollingBallWithEyes env roller
+        , if roller.deadAtTick /= Nothing then
+            renderExplosion env roller
+
+          else
+            renderRollingBallWithEyes env roller
         ]
 
 
@@ -495,3 +518,60 @@ renderLaserEyeWithEnemy ( x, y ) =
         ]
         [ V.circle ( x, y ) 3
         ]
+
+
+renderExplosion : Env a -> Roller -> V.Renderable
+renderExplosion env roller =
+    case roller.deadAtTick of
+        Nothing ->
+            V.group [] []
+
+        Just tick ->
+            if env.tick > tick + toFloat explosionDuration then
+                V.group [] []
+
+            else
+                V.group
+                    []
+                    [ renderExplosionParticle ( roller.x, roller.y ) 1 1 (env.tick - tick)
+                    , renderExplosionParticle ( roller.x, roller.y ) 1 -1 (env.tick - tick)
+                    , renderExplosionParticle ( roller.x, roller.y ) -1 -1 (env.tick - tick)
+                    , renderExplosionParticle ( roller.x, roller.y ) -1 1 (env.tick - tick)
+                    , renderExplosionParticle ( roller.x, roller.y ) 2 -1 (env.tick - tick)
+                    , renderExplosionParticle ( roller.x, roller.y ) -1 -2 (env.tick - tick)
+                    , renderExplosionParticle ( roller.x, roller.y ) -1 2 (env.tick - tick)
+                    , renderExplosionParticle ( roller.x, roller.y ) -3 2 (env.tick - tick)
+                    , renderExplosionParticle ( roller.x, roller.y ) -3 10 (env.tick - tick)
+                    , renderExplosionParticle ( roller.x, roller.y ) -10 2 (env.tick - tick)
+                    ]
+
+
+explosionDuration : Int
+explosionDuration =
+    50
+
+
+renderExplosionParticle : V.Point -> Float -> Float -> Float -> V.Renderable
+renderExplosionParticle ( x, y ) velX velY tick =
+    let
+        size =
+            10
+
+        rotationPerTick =
+            10
+    in
+    V.shapes
+        [ VS.fill Color.white
+        , VS.stroke Color.green
+        , VA.alpha <| (100 - 1.5 * tick) / 100
+        , VA.transform
+            [ VA.translate
+                (x + size / 2 + velX * tick)
+                (y + size / 2 + velY * tick)
+            , VA.rotate (degrees <| tick * rotationPerTick)
+            , VA.translate
+                -(x + size / 2)
+                -(y + size / 2)
+            ]
+        ]
+        [ V.rect ( x, y ) 10 10 ]
