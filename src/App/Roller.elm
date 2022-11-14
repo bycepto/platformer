@@ -202,7 +202,7 @@ hangXThreshold =
 
 fall : Roller -> Roller
 fall roller =
-    { roller | y = toFloat <| modBy 480 <| round <| roller.y + accelerationY }
+    { roller | y = roller.y + accelerationY }
 
 
 detectBlockCollisions : Env a -> Roller -> Roller
