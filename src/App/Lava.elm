@@ -104,9 +104,58 @@ moveStep =
 
 render : Lava -> V.Renderable
 render block =
-    V.shapes
-        [ VS.fill Color.orange
-        , VS.stroke Color.darkOrange
-        ]
-        [ V.rect ( block.x, block.y ) block.width block.height
+    V.group
+        []
+        [ V.shapes
+            [ VS.fill Color.yellow
+            , VS.stroke Color.yellow
+            ]
+            [ V.rect ( block.x, block.y ) block.width block.height
+            ]
+        , V.shapes
+            [ VS.fill Color.lightOrange
+            , VS.stroke Color.lightOrange
+            ]
+            [ V.rect ( block.x, block.y + 5 ) block.width (block.height - 5)
+            ]
+        , V.shapes
+            [ VS.fill Color.orange
+            , VS.stroke Color.orange
+            ]
+            [ V.rect ( block.x, block.y + 15 ) block.width (block.height - 15)
+            ]
+        , V.shapes
+            [ VS.fill Color.darkOrange
+            , VS.stroke Color.darkOrange
+            ]
+            [ V.rect ( block.x, block.y + 30 ) block.width (block.height - 30)
+            ]
+        , V.shapes
+            [ VS.fill Color.orange
+            , VS.stroke Color.orange
+            ]
+          <|
+            List.filterMap identity <|
+                List.indexedMap
+                    (\i x ->
+                        if modBy 10 i == 0 then
+                            Just <|
+                                V.rect
+                                    ( block.x + toFloat x
+                                    , block.y
+                                        + 30
+                                        + (if modBy 20 i == 0 then
+                                            15
+
+                                           else
+                                            5
+                                          )
+                                    )
+                                    1
+                                    1
+
+                        else
+                            Nothing
+                    )
+                    (List.range (ceiling block.x) (floor (block.x + block.width)))
         ]

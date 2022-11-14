@@ -1,6 +1,7 @@
 module App.Roller exposing
     ( Laser
     , Roller
+    , circle
     , eyeLasers
     , init
     , render
@@ -14,9 +15,7 @@ import Canvas as V
 import Canvas.Settings as VS
 import Canvas.Settings.Advanced as VA
 import Collision as CL
-import Color
-import Keyboard as K
-import Keyboard.Arrows as KA
+import Color exposing (Color)
 
 
 
@@ -25,8 +24,7 @@ import Keyboard.Arrows as KA
 
 type alias Env a =
     { a
-        | pressedKeys : List K.Key
-        , blocks : List Block
+        | blocks : List Block
         , lava : List Lava
         , tick : Float
         , devMode : Bool
@@ -44,11 +42,19 @@ type alias Roller =
     , obstaclesBelow : List CL.Rectangle
     , firingLaser : Bool
     , deadAtTick : Maybe Float
+
+    -- config
+    , facingLeft : Bool
+
+    -- , bodyColor : Color
+    -- , eyeColor : Color
     }
 
 
 init : Roller
 init =
+    -- init : Conf -> Roller
+    -- init conf =
     { x = 75
     , y = 25
     , angle = 0
@@ -59,17 +65,16 @@ init =
     , obstaclesBelow = []
     , firingLaser = False
     , deadAtTick = Nothing
+    , facingLeft = False
+
+    -- , bodyColor = conf.bodyColor
+    -- , eyeColor = conf.eyeColor
     }
 
 
 radius : Float
 radius =
     25
-
-
-degreesPerMove : Float
-degreesPerMove =
-    2.0
 
 
 circle : Roller -> CL.Circle
@@ -88,7 +93,6 @@ update env roller =
 
     else
         roller
-            |> applyKeyboardInputs env
             |> detectBlockCollisions env
             |> applyVelX
             |> applyVelY
@@ -107,57 +111,6 @@ collideWithLava { tick, lava } roller =
 dectectLavaCollision : Roller -> Lava -> Bool
 dectectLavaCollision roller lava =
     CL.detectCircleRect (circle roller) (App.Lava.boundingBox lava)
-
-
-applyKeyboardInputs : Env a -> Roller -> Roller
-applyKeyboardInputs env roller =
-    roller
-        |> applyKeyboardInputsDirections env
-        |> applyKeyboardInputsLaser env
-
-
-applyKeyboardInputsDirections : Env a -> Roller -> Roller
-applyKeyboardInputsDirections { pressedKeys } roller =
-    let
-        arrows =
-            KA.arrows pressedKeys
-
-        wasd =
-            KA.wasd pressedKeys
-
-        x =
-            clamp -1 1 (arrows.x + wasd.x)
-
-        pressingShift =
-            List.member K.Shift pressedKeys
-
-        velModifier =
-            if pressingShift then
-                0
-
-            else
-                1
-
-        spinModifier =
-            if pressingShift then
-                0.1
-
-            else
-                1
-    in
-    if x /= 0 then
-        { roller
-            | velX = toFloat x * accelerationX * velModifier
-            , angle = roller.angle + degreesPerMove * toFloat x * accelerationX * spinModifier
-        }
-
-    else
-        { roller | velX = 0 }
-
-
-applyKeyboardInputsLaser : Env a -> Roller -> Roller
-applyKeyboardInputsLaser { pressedKeys } roller =
-    { roller | firingLaser = List.member K.Spacebar pressedKeys }
 
 
 applyVelX : Roller -> Roller
@@ -327,11 +280,6 @@ collideWithBlockSides block roller =
         (App.Block.boundingBox block)
 
 
-accelerationX : Float
-accelerationX =
-    3.0
-
-
 {-| bootleg gravity
 -}
 accelerationY : Float
@@ -343,11 +291,18 @@ accelerationY =
 -- RENDER
 
 
-render : Env a -> Roller -> V.Renderable
-render env roller =
+type alias Conf =
+    { bodyColor : Color
+    , eyeColor : Color
+    , debug : Bool
+    }
+
+
+render : Env a -> Conf -> Roller -> V.Renderable
+render env conf roller =
     V.group
         []
-        [ if env.devMode then
+        [ if conf.debug && env.devMode then
             V.text
                 [ VS.stroke Color.red ]
                 ( 15, 15 )
@@ -371,29 +326,29 @@ render env roller =
             renderExplosion env roller
 
           else
-            renderRollingBallWithEyes env roller
+            renderRollingBallWithEyes conf roller
         ]
 
 
-renderRollingBallWithEyes : Env a -> Roller -> V.Renderable
-renderRollingBallWithEyes env roller =
+renderRollingBallWithEyes : Conf -> Roller -> V.Renderable
+renderRollingBallWithEyes conf roller =
     V.group
-        [ VS.fill Color.white
+        [ VS.fill conf.bodyColor
         , VS.stroke Color.black
         ]
-        [ renderBallWithEyes env roller
+        [ renderBallWithEyes conf roller
         ]
 
 
-renderBallWithEyes : Env a -> Roller -> V.Renderable
-renderBallWithEyes _ roller =
+renderBallWithEyes : Conf -> Roller -> V.Renderable
+renderBallWithEyes conf roller =
     let
         renderEye =
             if roller.firingLaser then
                 renderLaserEyeWithEnemy
 
             else
-                renderNormalEye
+                renderNormalEye conf
     in
     V.group
         []
@@ -414,12 +369,20 @@ eyeLocation radiusPct angleOffset roller =
 
 backEyeLocation : Roller -> V.Point
 backEyeLocation roller =
-    eyeLocation 0.35 -90 roller
+    if roller.facingLeft then
+        eyeLocation -0.35 -90 roller
+
+    else
+        eyeLocation 0.35 -90 roller
 
 
 frontEyeLocation : Roller -> V.Point
 frontEyeLocation roller =
-    eyeLocation 0.8 -25 roller
+    if roller.facingLeft then
+        eyeLocation -0.8 -155 roller
+
+    else
+        eyeLocation 0.8 -25 roller
 
 
 renderBall : Roller -> V.Renderable
@@ -461,9 +424,11 @@ renderMouth { tick } { x, y } =
         ]
 
 
-renderNormalEye : ( Float, Float ) -> V.Renderable
-renderNormalEye p =
-    V.shapes [] [ V.circle p 3 ]
+renderNormalEye : Conf -> ( Float, Float ) -> V.Renderable
+renderNormalEye conf p =
+    V.shapes
+        [ VS.fill conf.eyeColor ]
+        [ V.circle p 3 ]
 
 
 type alias Laser =

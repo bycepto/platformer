@@ -2,15 +2,13 @@ module Main exposing (main)
 
 import App.Block exposing (Block)
 import App.Enemy exposing (Enemy)
+import App.Hero exposing (Hero)
 import App.Lava exposing (Lava)
-import App.Roller exposing (Laser, Roller)
+import App.Roller exposing (Laser)
 import Browser exposing (Document)
 import Browser.Events as BE
 import Canvas as V
-import Canvas.Settings as VS
-import Canvas.Settings.Advanced as VA
 import Collision as CL
-import Color
 import Html as H
 import Html.Attributes as At
 import Keyboard as K
@@ -43,7 +41,7 @@ type alias Model =
     , pressedKeys : List K.Key
 
     -- entities
-    , roller : Roller
+    , hero : Hero
     , lasers : List Laser
     , enemy : Enemy
 
@@ -60,7 +58,7 @@ initModel : Flags -> Model
 initModel flags =
     { tick = 0
     , pressedKeys = []
-    , roller = App.Roller.init
+    , hero = App.Hero.init
     , lasers = []
     , enemy = App.Enemy.init
     , blocks =
@@ -118,7 +116,7 @@ update msg model =
 handleFrame : Model -> Model
 handleFrame model =
     model
-        |> updateRoller
+        |> updateHero
         |> updateEnemy
         |> updateLasers
         |> updateEnemyLaserCollisions
@@ -126,17 +124,17 @@ handleFrame model =
         |> incrementTick
 
 
-updateRoller : Model -> Model
-updateRoller model =
-    { model | roller = App.Roller.update model model.roller }
+updateHero : Model -> Model
+updateHero model =
+    { model | hero = App.Hero.update model model.hero }
 
 
 updateLasers : Model -> Model
 updateLasers model =
     { model
         | lasers =
-            if model.roller.firingLaser then
-                App.Roller.eyeLasers model.roller
+            if model.hero.roller.firingLaser then
+                App.Roller.eyeLasers model.hero.roller
 
             else
                 []
@@ -163,14 +161,11 @@ updateEnemyLaserCollisions model =
 
                         endPoint =
                             Maybe.withDefault (CL.toPoint laser.target) <|
-                                CL.detectLineCircleInfo line (App.Enemy.circle model.enemy)
+                                CL.detectLineCircleInfo line (App.Roller.circle model.enemy.roller)
                     in
                     App.Roller.Laser ( line.x1, line.y1 ) ( endPoint.x, endPoint.y )
                 )
                 model.lasers
-
-        enemy =
-            model.enemy
 
         newEnemy =
             List.foldl
@@ -178,54 +173,54 @@ updateEnemyLaserCollisions model =
                     let
                         line =
                             CL.toLineSegment laser.source laser.target
+
+                        roller =
+                            e.roller
                     in
-                    case CL.detectLineCircleInfo (CL.toLineSegment laser.source laser.target) (App.Enemy.circle e) of
+                    case CL.detectLineCircleInfo (CL.toLineSegment laser.source laser.target) (App.Roller.circle e.roller) of
                         Nothing ->
-                            { e | velX = 0 }
+                            { e | roller = { roller | velX = 0 } }
 
                         Just actualTarget ->
                             { e
-                                | velX =
-                                    e.velX
-                                        + (if line.x1 < e.x then
-                                            0.5
+                                | roller =
+                                    { roller
+                                        | velX =
+                                            e.roller.velX
+                                                + (if line.x1 < e.roller.x then
+                                                    0.5
 
-                                           else
-                                            -0.5
-                                          )
-                                , angle =
-                                    -- TODO: simplify - maybe just rotate one way per side?
-                                    e.angle
-                                        + (if line.x1 < e.x then
-                                            if actualTarget.y < e.y then
-                                                3
+                                                   else
+                                                    -0.5
+                                                  )
+                                        , angle =
+                                            -- TODO: simplify - maybe just rotate one way per side?
+                                            e.roller.angle
+                                                + (if line.x1 < e.roller.x then
+                                                    if actualTarget.y < e.roller.y then
+                                                        3
 
-                                            else
-                                                -3
+                                                    else
+                                                        -3
 
-                                           else if actualTarget.y < e.y then
-                                            -3
+                                                   else if actualTarget.y < e.roller.y then
+                                                    -3
 
-                                           else
-                                            3
-                                          )
-
-                                -- , velY = -10
-                                -- e.velY
-                                --     + (if Tuple.second laser.source < e.y then
-                                --         -10
-                                --
-                                --        else
-                                --         -10
-                                --       )
+                                                   else
+                                                    3
+                                                  )
+                                    }
                             }
-                 -- else if Tuple.first laser.source < e.x then
-                 --     { e | velX = e.velX + 1 }
-                 --
-                 -- else
-                 --     { e | velX = e.velX - 1 }
                 )
-                { enemy | velX = 0 }
+                (let
+                    enemy =
+                        model.enemy
+
+                    roller =
+                        enemy.roller
+                 in
+                 { enemy | roller = { roller | velX = 0 } }
+                )
                 model.lasers
     in
     { model | lasers = lasers, enemy = newEnemy }
@@ -304,11 +299,11 @@ render model =
           ]
         , List.map App.Block.render model.blocks
         , List.map App.Lava.render model.lava
-        , [ App.Roller.render model model.roller ]
+        , [ App.Hero.render model model.hero ]
 
         -- TODO: this is a hack - we render enemies after lasers so
         -- the laser appear behind them.
-        , List.map App.Roller.renderLaser model.lasers
+        , List.map App.Hero.renderLaser model.lasers
         , [ App.Enemy.render model model.enemy
           ]
         ]
