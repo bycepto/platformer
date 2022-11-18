@@ -146,8 +146,8 @@ type alias RectanglesInfo =
 -- COLLISIONS
 
 
-detectPointLine : Point -> LineSegment -> Bool
-detectPointLine p line =
+detectPointLineInfo : Point -> LineSegment -> Maybe ( LineSegment, LineSegment )
+detectPointLineInfo p line =
     let
         distFromEnds =
             distance p (head line) + distance p (tail line)
@@ -159,7 +159,19 @@ detectPointLine p line =
         buffer =
             0.1
     in
-    distFromEnds >= lineLen - buffer && distFromEnds <= lineLen + buffer
+    if distFromEnds >= lineLen - buffer && distFromEnds <= lineLen + buffer then
+        Just <|
+            ( toLineSegment ( line.x1, line.y1 ) ( p.x, p.y )
+            , toLineSegment ( p.x, p.y ) ( line.x2, line.y2 )
+            )
+
+    else
+        Nothing
+
+
+-- detectPointLine : Point -> LineSegment -> Bool
+-- detectPointLine p line =
+--     detectPointLineInfo p line /= Nothing
 
 
 detectPointCircle : Point -> Circle -> Bool
@@ -169,7 +181,7 @@ detectPointCircle p circle =
 
 {-| Detect the closest point between line and circle if they collide
 -}
-detectLineCircleInfo : LineSegment -> Circle -> Maybe Point
+detectLineCircleInfo : LineSegment -> Circle -> Maybe ( LineSegment, LineSegment )
 detectLineCircleInfo line circle =
     if detectPointCircle (head line) circle || detectPointCircle (tail line) circle then
         Nothing
@@ -191,8 +203,8 @@ detectLineCircleInfo line circle =
             closestPoint =
                 Point closestX closestY
         in
-        if detectPointLine closestPoint line && detectPointCircle closestPoint circle then
-            Just closestPoint
+        if detectPointCircle closestPoint circle then
+            detectPointLineInfo closestPoint line
 
         else
             Nothing

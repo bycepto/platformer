@@ -34,7 +34,6 @@ type Room
         , lava : List Lava
 
         -- exits
-        -- TODO: use edges instead?
         , left : Maybe (Hero -> Room)
         , right : Maybe (Hero -> Room)
         }
@@ -186,12 +185,13 @@ updateEnemyLaserCollisions (Room room) =
                         line =
                             CL.toLineSegment laser.source laser.target
 
-                        endPoint =
+                        seg =
                             room.enemy
                                 |> Maybe.andThen (\enemy -> CL.detectLineCircleInfo line (App.Roller.circle enemy.roller))
-                                |> Maybe.withDefault (CL.toPoint laser.target)
+                                |> Maybe.withDefault ( line, line )
+                                |> Tuple.first
                     in
-                    App.Roller.Laser ( line.x1, line.y1 ) ( endPoint.x, endPoint.y )
+                    App.Roller.Laser ( seg.x1, seg.y1 ) ( seg.x2, seg.y2 )
                 )
                 room.lasers
 
@@ -212,7 +212,7 @@ updateEnemyLaserCollisions (Room room) =
                                     Nothing ->
                                         { e | roller = { roller | velX = 0 } }
 
-                                    Just actualTarget ->
+                                    Just ( { y2 }, _ ) ->
                                         { e
                                             | roller =
                                                 { roller
@@ -228,13 +228,13 @@ updateEnemyLaserCollisions (Room room) =
                                                         -- TODO: simplify - maybe just rotate one way per side?
                                                         e.roller.angle
                                                             + (if line.x1 < e.roller.x then
-                                                                if actualTarget.y < e.roller.y then
+                                                                if y2 < e.roller.y then
                                                                     3
 
                                                                 else
                                                                     -3
 
-                                                               else if actualTarget.y < e.roller.y then
+                                                               else if y2 < e.roller.y then
                                                                 -3
 
                                                                else
