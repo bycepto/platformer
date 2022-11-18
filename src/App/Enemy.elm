@@ -18,10 +18,15 @@ import Color
 
 type alias Env a =
     { a
+        | tick : Float
+        , devMode : Bool
+    }
+
+
+type alias Room a =
+    { a
         | blocks : List Block
         , lava : List Lava
-        , tick : Float
-        , devMode : Bool
     }
 
 
@@ -49,15 +54,15 @@ init =
 -- UPDATE
 
 
-update : Env a -> Enemy -> Enemy
-update env enemy =
-    { enemy | roller = updateRoller env enemy.roller }
+update : Env a -> Room b -> Enemy -> Enemy
+update env room enemy =
+    { enemy | roller = updateRoller env room enemy.roller }
 
 
-updateRoller : Env a -> Roller -> Roller
-updateRoller env roller =
+updateRoller : Env a -> Room b -> Roller -> Roller
+updateRoller env room roller =
     roller
-        |> App.Roller.update env
+        |> App.Roller.update env room
 
 
 

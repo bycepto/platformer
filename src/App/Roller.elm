@@ -24,10 +24,15 @@ import Color exposing (Color)
 
 type alias Env a =
     { a
+        | tick : Float
+        , devMode : Bool
+    }
+
+
+type alias Room a =
+    { a
         | blocks : List Block
         , lava : List Lava
-        , tick : Float
-        , devMode : Bool
     }
 
 
@@ -86,21 +91,21 @@ circle { x, y } =
 -- UPDATE
 
 
-update : Env a -> Roller -> Roller
-update env roller =
+update : Env a -> Room b -> Roller -> Roller
+update env room roller =
     if roller.deadAtTick /= Nothing then
         roller
 
     else
         roller
-            |> detectBlockCollisions env
+            |> detectBlockCollisions room
             |> applyVelX
             |> applyVelY
-            |> collideWithLava env
+            |> collideWithLava env room
 
 
-collideWithLava : Env a -> Roller -> Roller
-collideWithLava { tick, lava } roller =
+collideWithLava : Env a -> Room b -> Roller -> Roller
+collideWithLava { tick } { lava } roller =
     if List.any (dectectLavaCollision roller) lava then
         { roller | deadAtTick = Just tick }
 
@@ -205,7 +210,7 @@ fall roller =
     { roller | y = roller.y + accelerationY }
 
 
-detectBlockCollisions : Env a -> Roller -> Roller
+detectBlockCollisions : Room b -> Roller -> Roller
 detectBlockCollisions { blocks } roller =
     List.foldl collideWithBlock (preCollisionRoller roller) blocks
 

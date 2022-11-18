@@ -22,10 +22,15 @@ import Keyboard.Arrows as KA
 type alias Env a =
     { a
         | pressedKeys : List K.Key
-        , blocks : List Block
-        , lava : List Lava
         , tick : Float
         , devMode : Bool
+    }
+
+
+type alias Room a =
+    { a
+        | blocks : List Block
+        , lava : List Lava
     }
 
 
@@ -44,16 +49,16 @@ init =
 -- UPDATE
 
 
-update : Env a -> Hero -> Hero
-update env hero =
-    { hero | roller = updateRoller env hero.roller }
+update : Env a -> Room b -> Hero -> Hero
+update env room hero =
+    { hero | roller = updateRoller env room hero.roller }
 
 
-updateRoller : Env a -> Roller -> Roller
-updateRoller env roller =
+updateRoller : Env a -> Room b -> Roller -> Roller
+updateRoller env room roller =
     roller
         |> applyKeyboardInputs env
-        |> App.Roller.update env
+        |> App.Roller.update env room
 
 
 applyKeyboardInputs : Env a -> Roller -> Roller
