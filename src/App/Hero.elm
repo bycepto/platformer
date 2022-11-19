@@ -7,8 +7,9 @@ module App.Hero exposing
     )
 
 import App.Block exposing (Block)
+import App.Laser exposing (Laser)
 import App.Lava exposing (Lava)
-import App.Roller exposing (Laser, Roller)
+import App.Roller exposing (Roller)
 import Canvas as V
 import Color
 import Keyboard as K
@@ -139,4 +140,4 @@ render env hero =
 
 renderLaser : Laser -> V.Renderable
 renderLaser laser =
-    App.Roller.renderLaser laser
+    App.Laser.render laser

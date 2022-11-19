@@ -3,8 +3,9 @@ module App.Room exposing (Room, init, render, update)
 import App.Block exposing (Block)
 import App.Enemy exposing (Enemy)
 import App.Hero exposing (Hero)
+import App.Laser exposing (Laser)
 import App.Lava exposing (Lava)
-import App.Roller exposing (Laser)
+import App.Roller
 import Canvas as V
 import Collision as CL
 import Keyboard as K
@@ -154,7 +155,9 @@ updateLasers (Room room) =
         { room
             | lasers =
                 if room.hero.roller.firingLaser then
-                    App.Roller.eyeLasers room.hero.roller
+                    List.map
+                        (App.Laser.init room.hero.roller.angle)
+                        (App.Roller.eyes room.hero.roller)
 
                 else
                     []
@@ -191,7 +194,7 @@ updateEnemyLaserCollisions (Room room) =
                                 |> Maybe.withDefault ( line, line )
                                 |> Tuple.first
                     in
-                    App.Roller.Laser ( seg.x1, seg.y1 ) ( seg.x2, seg.y2 )
+                    Laser ( seg.x1, seg.y1 ) ( seg.x2, seg.y2 )
                 )
                 room.lasers
 

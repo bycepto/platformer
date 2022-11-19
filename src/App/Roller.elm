@@ -1,11 +1,9 @@
 module App.Roller exposing
-    ( Laser
-    , Roller
+    ( Roller
     , circle
-    , eyeLasers
+    , eyes
     , init
     , render
-    , renderLaser
     , update
     )
 
@@ -350,7 +348,7 @@ renderBallWithEyes conf roller =
     let
         renderEye =
             if roller.firingLaser then
-                renderLaserEyeWithEnemy
+                renderLaserEye
 
             else
                 renderNormalEye conf
@@ -436,52 +434,15 @@ renderNormalEye conf p =
         [ V.circle p 3 ]
 
 
-type alias Laser =
-    { source : V.Point
-    , target : V.Point
-    }
+eyes : Roller -> List V.Point
+eyes roller =
+    [ backEyeLocation roller
+    , frontEyeLocation roller
+    ]
 
 
-eyeLasers : Roller -> List Laser
-eyeLasers roller =
-    List.map
-        (eyeLaser roller.angle)
-        [ backEyeLocation roller
-        , frontEyeLocation roller
-        ]
-
-
-eyeLaser : Float -> V.Point -> Laser
-eyeLaser angle ( x, y ) =
-    let
-        ( dx, dy ) =
-            fromPolar ( 1000, degrees angle )
-    in
-    { source = ( x, y )
-    , target = ( x + dx, y + dy )
-    }
-
-
-renderLaser : Laser -> V.Renderable
-renderLaser { source, target } =
-    let
-        ( x1, y1 ) =
-            source
-
-        ( x2, y2 ) =
-            target
-    in
-    V.shapes
-        [ VA.shadow { blur = 5, color = Color.red, offset = ( 0, 0 ) }
-        , VS.stroke Color.red
-        ]
-        [ V.path ( x1, y1 )
-            [ V.lineTo ( x2, y2 ) ]
-        ]
-
-
-renderLaserEyeWithEnemy : V.Point -> V.Renderable
-renderLaserEyeWithEnemy ( x, y ) =
+renderLaserEye : V.Point -> V.Renderable
+renderLaserEye ( x, y ) =
     V.shapes
         [ VA.shadow { blur = 5, color = Color.red, offset = ( 0, 0 ) }
         , VS.stroke Color.red
