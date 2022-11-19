@@ -1,9 +1,10 @@
 module Collision exposing
-    ( Circle
+    ( ACircle
     , LineSegment
     , Point
     , Rectangle
     , RectanglesInfo
+    , Shape(..)
     , detectCircleRect
     , detectCircleRectInfo
     , detectLineCircle
@@ -23,6 +24,14 @@ module Collision exposing
 Implementation are heavily based on <https://www.jeffreythompson.org/collision-detection/>
 
 -}
+
+-- MODEL
+
+
+type Shape
+    = Circle ACircle
+
+
 
 -- POINT
 
@@ -79,19 +88,19 @@ length line =
 -- CIRCLE
 
 
-type alias Circle =
+type alias ACircle =
     { x : Float
     , y : Float
     , radius : Float
     }
 
 
-toCircle : ( Float, Float ) -> Float -> Circle
+toCircle : ( Float, Float ) -> Float -> ACircle
 toCircle ( x, y ) radius =
-    Circle x y radius
+    ACircle x y radius
 
 
-center : Circle -> Point
+center : ACircle -> Point
 center { x, y } =
     Point x y
 
@@ -169,19 +178,20 @@ detectPointLineInfo p line =
         Nothing
 
 
+
 -- detectPointLine : Point -> LineSegment -> Bool
 -- detectPointLine p line =
 --     detectPointLineInfo p line /= Nothing
 
 
-detectPointCircle : Point -> Circle -> Bool
+detectPointCircle : Point -> ACircle -> Bool
 detectPointCircle p circle =
     distance p (center circle) <= circle.radius
 
 
 {-| Detect the closest point between line and circle if they collide
 -}
-detectLineCircleInfo : LineSegment -> Circle -> Maybe ( LineSegment, LineSegment )
+detectLineCircleInfo : LineSegment -> ACircle -> Maybe ( LineSegment, LineSegment )
 detectLineCircleInfo line circle =
     if detectPointCircle (head line) circle || detectPointCircle (tail line) circle then
         Nothing
@@ -210,7 +220,7 @@ detectLineCircleInfo line circle =
             Nothing
 
 
-detectLineCircle : LineSegment -> Circle -> Bool
+detectLineCircle : LineSegment -> ACircle -> Bool
 detectLineCircle line circle =
     detectLineCircleInfo line circle /= Nothing
 
@@ -255,7 +265,7 @@ detectRects rect1 rect2 =
 -- Circle / Rectangle
 
 
-detectCircleRectInfo : Circle -> Rectangle -> Maybe RectanglesInfo
+detectCircleRectInfo : ACircle -> Rectangle -> Maybe RectanglesInfo
 detectCircleRectInfo circle rect =
     if detectCircleRect circle rect then
         Just
@@ -269,14 +279,14 @@ detectCircleRectInfo circle rect =
         Nothing
 
 
-detectCircleRect : Circle -> Rectangle -> Bool
+detectCircleRect : ACircle -> Rectangle -> Bool
 detectCircleRect circle rect =
     detectPointCircle
         (toPoint ( detectCircleRectX circle rect, detectCircleRectY circle rect ))
         circle
 
 
-detectCircleRectX : Circle -> Rectangle -> Float
+detectCircleRectX : ACircle -> Rectangle -> Float
 detectCircleRectX circle rect =
     if circle.x < left rect then
         left rect
@@ -288,7 +298,7 @@ detectCircleRectX circle rect =
         circle.x
 
 
-detectCircleRectY : Circle -> Rectangle -> Float
+detectCircleRectY : ACircle -> Rectangle -> Float
 detectCircleRectY circle rect =
     if circle.y < top rect then
         top rect
