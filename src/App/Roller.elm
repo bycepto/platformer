@@ -3,7 +3,9 @@ module App.Roller exposing
     , circle
     , eyes
     , init
+    , pushFrom
     , render
+    , stopX
     , update
     )
 
@@ -80,9 +82,9 @@ radius =
     25
 
 
-circle : Roller -> CL.Circle
+circle : Roller -> CL.Shape
 circle { x, y } =
-    CL.toCircle ( x, y ) radius
+    CL.Circle <| CL.toCircle ( x, y ) radius
 
 
 
@@ -104,16 +106,18 @@ update env room roller =
 
 collideWithLava : Env a -> Room b -> Roller -> Roller
 collideWithLava { tick } { lava } roller =
-    if List.any (dectectLavaCollision roller) lava then
+    if List.any (detectLavaCollision roller) lava then
         { roller | deadAtTick = Just tick }
 
     else
         roller
 
 
-dectectLavaCollision : Roller -> Lava -> Bool
-dectectLavaCollision roller lava =
-    CL.detectCircleRect (circle roller) (App.Lava.boundingBox lava)
+detectLavaCollision : Roller -> Lava -> Bool
+detectLavaCollision roller lava =
+    case circle roller of
+        CL.Circle c ->
+            CL.detectCircleRect c (App.Lava.boundingBox lava)
 
 
 applyVelX : Roller -> Roller
@@ -214,6 +218,44 @@ detectBlockCollisions { blocks } roller =
 
 
 
+-- lasers
+
+
+pushFrom : Float -> Float -> Roller -> Roller
+pushFrom fromX atY roller =
+    { roller
+        | velX =
+            roller.velX
+                + (if fromX < roller.x then
+                    0.5
+
+                   else
+                    -0.5
+                  )
+        , angle =
+            roller.angle
+                + (if fromX < roller.x then
+                    if atY < roller.y then
+                        3
+
+                    else
+                        -3
+
+                   else if atY < roller.y then
+                    -3
+
+                   else
+                    3
+                  )
+    }
+
+
+stopX : Roller -> Roller
+stopX roller =
+    { roller | velX = 0 }
+
+
+
 -- blocks
 
 
@@ -278,9 +320,9 @@ canClimbUpThreshold =
 
 collideWithBlockSides : Block -> Roller -> Maybe CL.RectanglesInfo
 collideWithBlockSides block roller =
-    CL.detectCircleRectInfo
-        (circle roller)
-        (App.Block.boundingBox block)
+    case circle roller of
+        CL.Circle c ->
+            CL.detectCircleRectInfo c (App.Block.boundingBox block)
 
 
 {-| bootleg gravity

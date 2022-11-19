@@ -1,14 +1,17 @@
 module App.Enemy exposing
     ( Enemy
+    , applyLaser
     , init
     , render
     , update
     )
 
 import App.Block exposing (Block)
+import App.Laser exposing (Laser)
 import App.Lava exposing (Lava)
 import App.Roller exposing (Roller)
 import Canvas as V
+import Collision as CL
 import Color
 
 
@@ -63,6 +66,25 @@ updateRoller : Env a -> Room b -> Roller -> Roller
 updateRoller env room roller =
     roller
         |> App.Roller.update env room
+
+
+applyLaser : Laser -> Enemy -> Enemy
+applyLaser laser enemy =
+    let
+        line =
+            CL.toLineSegment laser.source laser.target
+
+        circle =
+            case App.Roller.circle enemy.roller of
+                CL.Circle c ->
+                    c
+    in
+    case CL.detectLineCircleInfo line circle of
+        Nothing ->
+            enemy
+
+        Just ( { x1, y2 }, _ ) ->
+            { enemy | roller = App.Roller.pushFrom x1 y2 enemy.roller }
 
 
 

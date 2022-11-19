@@ -7,7 +7,6 @@ import App.Laser exposing (Laser)
 import App.Lava exposing (Lava)
 import App.Roller
 import Canvas as V
-import Collision as CL
 import Keyboard as K
 
 
@@ -100,9 +99,9 @@ handleFrame : Env a -> Room -> Room
 handleFrame env room =
     room
         |> updateHero env
-        |> updateEnemy env
         |> updateLasers
         |> updateEnemyLaserCollisions
+        |> updateEnemy env
         |> updateBlocks
         |> changeRoom
 
@@ -181,21 +180,29 @@ updateEnemyLaserCollisions : Room -> Room
 updateEnemyLaserCollisions (Room room) =
     -- TODO: refactor
     let
+        -- V1
+        rollers =
+            case room.enemy of
+                Nothing ->
+                    []
+
+                Just enemy ->
+                    [ App.Roller.circle enemy.roller ]
+
         lasers =
             List.map
-                (\laser ->
-                    let
-                        line =
-                            CL.toLineSegment laser.source laser.target
+                (\laser -> Maybe.withDefault laser <| App.Laser.applyFirstCollision rollers laser)
+                room.lasers
 
-                        seg =
-                            room.enemy
-                                |> Maybe.andThen (\enemy -> CL.detectLineCircleInfo line (App.Roller.circle enemy.roller))
-                                |> Maybe.withDefault ( line, line )
-                                |> Tuple.first
-                    in
-                    Laser ( seg.x1, seg.y1 ) ( seg.x2, seg.y2 )
-                )
+        -- V2
+        enemies =
+            room.enemy
+                |> Maybe.map List.singleton
+                |> Maybe.withDefault []
+
+        collisions =
+            List.map
+                (\laser -> App.Laser.applyFirstCollisionWithEntity (App.Roller.circle << .roller) enemies laser)
                 room.lasers
 
         newEnemy =
@@ -203,55 +210,8 @@ updateEnemyLaserCollisions (Room room) =
                 |> Maybe.map
                     (\enemy ->
                         List.foldl
-                            (\laser e ->
-                                let
-                                    line =
-                                        CL.toLineSegment laser.source laser.target
-
-                                    roller =
-                                        e.roller
-                                in
-                                case CL.detectLineCircleInfo (CL.toLineSegment laser.source laser.target) (App.Roller.circle e.roller) of
-                                    Nothing ->
-                                        { e | roller = { roller | velX = 0 } }
-
-                                    Just ( { y2 }, _ ) ->
-                                        { e
-                                            | roller =
-                                                { roller
-                                                    | velX =
-                                                        e.roller.velX
-                                                            + (if line.x1 < e.roller.x then
-                                                                0.5
-
-                                                               else
-                                                                -0.5
-                                                              )
-                                                    , angle =
-                                                        -- TODO: simplify - maybe just rotate one way per side?
-                                                        e.roller.angle
-                                                            + (if line.x1 < e.roller.x then
-                                                                if y2 < e.roller.y then
-                                                                    3
-
-                                                                else
-                                                                    -3
-
-                                                               else if y2 < e.roller.y then
-                                                                -3
-
-                                                               else
-                                                                3
-                                                              )
-                                                }
-                                        }
-                            )
-                            (let
-                                roller =
-                                    enemy.roller
-                             in
-                             { enemy | roller = { roller | velX = 0 } }
-                            )
+                            App.Enemy.applyLaser
+                            { enemy | roller = App.Roller.stopX enemy.roller }
                             room.lasers
                     )
     in

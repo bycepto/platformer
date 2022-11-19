@@ -1,8 +1,9 @@
 module App.Laser exposing
     ( Laser
+    , applyFirstCollision
+    , applyFirstCollisionWithEntity
     , init
     , render
-    , applyFirstCollision
     )
 
 import Canvas as V
@@ -46,6 +47,30 @@ line { source, target } =
 
 
 -- UPDATE
+
+
+{-| Fire a laser at a list of entities and find the first entity that the laser
+collides with along it's path, and return the resulting laser and that entity.
+
+If there is not collision, return the original laser and nothing.
+
+This function also requires a function that maps entities to shapes to detect
+collisions.
+
+-}
+applyFirstCollisionWithEntity : (a -> CL.Shape) -> List a -> Laser -> ( Laser, Maybe a )
+applyFirstCollisionWithEntity toShape entities laser =
+    List.foldl
+        (\entity ( laserSegment, target ) ->
+            case applyCollision (toShape entity) laserSegment of
+                Nothing ->
+                    ( laserSegment, target )
+
+                Just newLaserSegment ->
+                    ( newLaserSegment, Just entity )
+        )
+        ( laser, Nothing )
+        entities
 
 
 applyFirstCollision : List CL.Shape -> Laser -> Maybe Laser
