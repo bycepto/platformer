@@ -1,14 +1,17 @@
 module App.Enemy exposing
     ( Enemy
+    , applyLaser
     , init
     , render
     , update
     )
 
 import App.Block exposing (Block)
+import App.Laser exposing (Laser)
 import App.Lava exposing (Lava)
 import App.Roller exposing (Roller)
 import Canvas as V
+import Collision as CL
 import Color
 
 
@@ -35,13 +38,13 @@ type alias Enemy =
     }
 
 
-init : Enemy
-init =
+init : Float -> Enemy
+init x =
     { roller =
         App.Roller.init
             |> (\r ->
                     { r
-                        | x = 400
+                        | x = x
                         , y = 25
                         , facingLeft = True
                         , angle = 180
@@ -63,6 +66,18 @@ updateRoller : Env a -> Room b -> Roller -> Roller
 updateRoller env room roller =
     roller
         |> App.Roller.update env room
+
+
+applyLaser : Laser -> Enemy -> Enemy
+applyLaser { source, target } enemy =
+    let
+        ( x1, _ ) =
+            source
+
+        ( _, y2 ) =
+            target
+    in
+    { enemy | roller = App.Roller.pushFrom x1 y2 enemy.roller }
 
 
 

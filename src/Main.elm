@@ -157,11 +157,9 @@ viewGame model =
 
 render : Model -> List V.Renderable
 render model =
-    List.concat
-        [ [ V.clear ( 0, 0 ) width height
-          ]
-        , App.Room.render model model.room
-        ]
+    [ V.clear ( 0, 0 ) width height
+    , App.Room.render model model.room
+    ]
 
 
 width : number

@@ -1,11 +1,11 @@
 module App.Roller exposing
-    ( Laser
-    , Roller
+    ( Roller
     , circle
-    , eyeLasers
+    , eyes
     , init
+    , pushFrom
     , render
-    , renderLaser
+    , stopX
     , update
     )
 
@@ -50,16 +50,11 @@ type alias Roller =
 
     -- config
     , facingLeft : Bool
-
-    -- , bodyColor : Color
-    -- , eyeColor : Color
     }
 
 
 init : Roller
 init =
-    -- init : Conf -> Roller
-    -- init conf =
     { x = 75
     , y = 25
     , angle = 0
@@ -71,9 +66,6 @@ init =
     , firingLaser = False
     , deadAtTick = Nothing
     , facingLeft = False
-
-    -- , bodyColor = conf.bodyColor
-    -- , eyeColor = conf.eyeColor
     }
 
 
@@ -82,9 +74,9 @@ radius =
     25
 
 
-circle : Roller -> CL.Circle
+circle : Roller -> CL.Shape
 circle { x, y } =
-    CL.toCircle ( x, y ) radius
+    CL.Circle <| CL.toCircle ( x, y ) radius
 
 
 
@@ -106,16 +98,18 @@ update env room roller =
 
 collideWithLava : Env a -> Room b -> Roller -> Roller
 collideWithLava { tick } { lava } roller =
-    if List.any (dectectLavaCollision roller) lava then
+    if List.any (detectLavaCollision roller) lava then
         { roller | deadAtTick = Just tick }
 
     else
         roller
 
 
-dectectLavaCollision : Roller -> Lava -> Bool
-dectectLavaCollision roller lava =
-    CL.detectCircleRect (circle roller) (App.Lava.boundingBox lava)
+detectLavaCollision : Roller -> Lava -> Bool
+detectLavaCollision roller lava =
+    case circle roller of
+        CL.Circle c ->
+            CL.detectCircleRect c (App.Lava.boundingBox lava)
 
 
 applyVelX : Roller -> Roller
@@ -216,6 +210,52 @@ detectBlockCollisions { blocks } roller =
 
 
 
+-- lasers
+
+
+pushFrom : Float -> Float -> Roller -> Roller
+pushFrom fromX atY roller =
+    { roller
+        | velX =
+            clamp
+                -maxAbsPushX
+                maxAbsPushX
+                roller.velX
+                + (if fromX < roller.x then
+                    0.05
+
+                   else
+                    -0.05
+                  )
+        , angle =
+            roller.angle
+                + (if fromX < roller.x then
+                    if atY < roller.y then
+                        3
+
+                    else
+                        -3
+
+                   else if atY < roller.y then
+                    -3
+
+                   else
+                    3
+                  )
+    }
+
+
+maxAbsPushX : Float
+maxAbsPushX =
+    2
+
+
+stopX : Roller -> Roller
+stopX roller =
+    { roller | velX = 0 }
+
+
+
 -- blocks
 
 
@@ -280,9 +320,9 @@ canClimbUpThreshold =
 
 collideWithBlockSides : Block -> Roller -> Maybe CL.RectanglesInfo
 collideWithBlockSides block roller =
-    CL.detectCircleRectInfo
-        (circle roller)
-        (App.Block.boundingBox block)
+    case circle roller of
+        CL.Circle c ->
+            CL.detectCircleRectInfo c (App.Block.boundingBox block)
 
 
 {-| bootleg gravity
@@ -350,7 +390,7 @@ renderBallWithEyes conf roller =
     let
         renderEye =
             if roller.firingLaser then
-                renderLaserEyeWithEnemy
+                renderLaserEye
 
             else
                 renderNormalEye conf
@@ -436,52 +476,15 @@ renderNormalEye conf p =
         [ V.circle p 3 ]
 
 
-type alias Laser =
-    { source : V.Point
-    , target : V.Point
-    }
+eyes : Roller -> List V.Point
+eyes roller =
+    [ backEyeLocation roller
+    , frontEyeLocation roller
+    ]
 
 
-eyeLasers : Roller -> List Laser
-eyeLasers roller =
-    List.map
-        (eyeLaser roller.angle)
-        [ backEyeLocation roller
-        , frontEyeLocation roller
-        ]
-
-
-eyeLaser : Float -> V.Point -> Laser
-eyeLaser angle ( x, y ) =
-    let
-        ( dx, dy ) =
-            fromPolar ( 1000, degrees angle )
-    in
-    { source = ( x, y )
-    , target = ( x + dx, y + dy )
-    }
-
-
-renderLaser : Laser -> V.Renderable
-renderLaser { source, target } =
-    let
-        ( x1, y1 ) =
-            source
-
-        ( x2, y2 ) =
-            target
-    in
-    V.shapes
-        [ VA.shadow { blur = 5, color = Color.red, offset = ( 0, 0 ) }
-        , VS.stroke Color.red
-        ]
-        [ V.path ( x1, y1 )
-            [ V.lineTo ( x2, y2 ) ]
-        ]
-
-
-renderLaserEyeWithEnemy : V.Point -> V.Renderable
-renderLaserEyeWithEnemy ( x, y ) =
+renderLaserEye : V.Point -> V.Renderable
+renderLaserEye ( x, y ) =
     V.shapes
         [ VA.shadow { blur = 5, color = Color.red, offset = ( 0, 0 ) }
         , VS.stroke Color.red

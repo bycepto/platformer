@@ -3,10 +3,10 @@ module App.Room exposing (Room, init, render, update)
 import App.Block exposing (Block)
 import App.Enemy exposing (Enemy)
 import App.Hero exposing (Hero)
+import App.Laser exposing (Laser)
 import App.Lava exposing (Lava)
-import App.Roller exposing (Laser)
+import App.Roller
 import Canvas as V
-import Collision as CL
 import Keyboard as K
 
 
@@ -27,14 +27,13 @@ type Room
         { -- entities
           hero : Hero
         , lasers : List Laser
-        , enemy : Maybe Enemy
+        , enemies : List Enemy
 
         -- obstacles
         , blocks : List Block
         , lava : List Lava
 
         -- exits
-        -- TODO: use edges instead?
         , left : Maybe (Hero -> Room)
         , right : Maybe (Hero -> Room)
         }
@@ -50,7 +49,7 @@ room1 hero =
     Room
         { hero = hero
         , lasers = []
-        , enemy = Just App.Enemy.init
+        , enemies = [ App.Enemy.init 400 ]
         , blocks =
             [ App.Block.init 25 150 100 30
             , App.Block.init 175 300 100 30
@@ -75,7 +74,7 @@ room2 hero =
     Room
         { hero = hero
         , lasers = []
-        , enemy = Nothing
+        , enemies = [ App.Enemy.init 300, App.Enemy.init 500 ]
         , blocks =
             [ App.Block.init 0 300 1000 10
             ]
@@ -100,9 +99,9 @@ handleFrame : Env a -> Room -> Room
 handleFrame env room =
     room
         |> updateHero env
-        |> updateEnemy env
         |> updateLasers
         |> updateEnemyLaserCollisions
+        |> updateEnemies env
         |> updateBlocks
         |> changeRoom
 
@@ -155,104 +154,61 @@ updateLasers (Room room) =
         { room
             | lasers =
                 if room.hero.roller.firingLaser then
-                    App.Roller.eyeLasers room.hero.roller
+                    List.map
+                        (App.Laser.init room.hero.roller.angle)
+                        (App.Roller.eyes room.hero.roller)
 
                 else
                     []
         }
 
 
-updateEnemy : Env a -> Room -> Room
-updateEnemy env (Room room) =
+updateEnemies : Env a -> Room -> Room
+updateEnemies env (Room room) =
     Room <|
-        case room.enemy of
-            Just e ->
-                { room
-                    | enemy = Just <| App.Enemy.update env room e
-                }
-
-            Nothing ->
-                room
+        { room
+            | enemies = List.map (App.Enemy.update env room) room.enemies
+        }
 
 
 updateEnemyLaserCollisions : Room -> Room
 updateEnemyLaserCollisions (Room room) =
-    -- TODO: refactor
     let
-        lasers =
-            List.map
-                (\laser ->
-                    let
-                        line =
-                            CL.toLineSegment laser.source laser.target
+        collisions =
+            enemyLaserCollisions (Room room)
 
-                        endPoint =
-                            room.enemy
-                                |> Maybe.andThen (\enemy -> CL.detectLineCircleInfo line (App.Roller.circle enemy.roller))
-                                |> Maybe.withDefault (CL.toPoint laser.target)
-                    in
-                    App.Roller.Laser ( line.x1, line.y1 ) ( endPoint.x, endPoint.y )
-                )
-                room.lasers
-
-        newEnemy =
-            room.enemy
-                |> Maybe.map
+        newEnemies =
+            room.enemies
+                |> List.map
                     (\enemy ->
-                        List.foldl
-                            (\laser e ->
-                                let
-                                    line =
-                                        CL.toLineSegment laser.source laser.target
+                        collisions
+                            |> List.filter (\( _, target ) -> target == Just enemy)
+                            |> List.head
+                            |> Maybe.map
+                                (\( { source, target }, _ ) ->
+                                    let
+                                        ( x1, _ ) =
+                                            source
 
-                                    roller =
-                                        e.roller
-                                in
-                                case CL.detectLineCircleInfo (CL.toLineSegment laser.source laser.target) (App.Roller.circle e.roller) of
-                                    Nothing ->
-                                        { e | roller = { roller | velX = 0 } }
-
-                                    Just actualTarget ->
-                                        { e
-                                            | roller =
-                                                { roller
-                                                    | velX =
-                                                        e.roller.velX
-                                                            + (if line.x1 < e.roller.x then
-                                                                0.5
-
-                                                               else
-                                                                -0.5
-                                                              )
-                                                    , angle =
-                                                        -- TODO: simplify - maybe just rotate one way per side?
-                                                        e.roller.angle
-                                                            + (if line.x1 < e.roller.x then
-                                                                if actualTarget.y < e.roller.y then
-                                                                    3
-
-                                                                else
-                                                                    -3
-
-                                                               else if actualTarget.y < e.roller.y then
-                                                                -3
-
-                                                               else
-                                                                3
-                                                              )
-                                                }
-                                        }
-                            )
-                            (let
-                                roller =
-                                    enemy.roller
-                             in
-                             { enemy | roller = { roller | velX = 0 } }
-                            )
-                            room.lasers
+                                        ( _, y2 ) =
+                                            target
+                                    in
+                                    { enemy | roller = App.Roller.pushFrom x1 y2 enemy.roller }
+                                )
+                            |> Maybe.withDefault { enemy | roller = App.Roller.stopX enemy.roller }
                     )
+
+        newLasers =
+            collisions |> List.unzip |> Tuple.first
     in
-    Room { room | lasers = lasers, enemy = newEnemy }
+    Room { room | lasers = newLasers, enemies = newEnemies }
+
+
+enemyLaserCollisions : Room -> List ( Laser, Maybe Enemy )
+enemyLaserCollisions (Room room) =
+    List.map
+        (App.Laser.applyFirstCollisionWithEntity (App.Roller.circle << .roller) room.enemies)
+        room.lasers
 
 
 updateBlocks : Room -> Room
@@ -268,25 +224,21 @@ updateBlocks (Room room) =
 -- RENDER
 
 
-render : Env a -> Room -> List V.Renderable
+render : Env a -> Room -> V.Renderable
 render env (Room room) =
-    List.concat
-        [ [ V.clear ( 0, 0 ) width height
-          ]
-        , List.map App.Block.render room.blocks
-        , List.map App.Lava.render room.lava
-        , [ App.Hero.render env room.hero ]
+    V.group
+        []
+    <|
+        List.concat
+            [ List.map App.Block.render room.blocks
+            , List.map App.Lava.render room.lava
+            , [ App.Hero.render env room.hero ]
 
-        -- TODO: this is a hack - we render enemies after lasers so
-        -- the laser appear behind them.
-        , List.map App.Hero.renderLaser room.lasers
-        , case room.enemy of
-            Nothing ->
-                []
-
-            Just enemy ->
-                [ App.Enemy.render env enemy ]
-        ]
+            -- TODO: this is a hack - we render enemies after lasers so
+            -- the laser appear behind them.
+            , List.map App.Hero.renderLaser room.lasers
+            , List.map (App.Enemy.render env) room.enemies
+            ]
 
 
 width : number
