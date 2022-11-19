@@ -268,25 +268,26 @@ updateBlocks (Room room) =
 -- RENDER
 
 
-render : Env a -> Room -> List V.Renderable
+render : Env a -> Room -> V.Renderable
 render env (Room room) =
-    List.concat
-        [ [ V.clear ( 0, 0 ) width height
-          ]
-        , List.map App.Block.render room.blocks
-        , List.map App.Lava.render room.lava
-        , [ App.Hero.render env room.hero ]
+    V.group
+        []
+    <|
+        List.concat
+            [ List.map App.Block.render room.blocks
+            , List.map App.Lava.render room.lava
+            , [ App.Hero.render env room.hero ]
 
-        -- TODO: this is a hack - we render enemies after lasers so
-        -- the laser appear behind them.
-        , List.map App.Hero.renderLaser room.lasers
-        , case room.enemy of
-            Nothing ->
-                []
+            -- TODO: this is a hack - we render enemies after lasers so
+            -- the laser appear behind them.
+            , List.map App.Hero.renderLaser room.lasers
+            , case room.enemy of
+                Nothing ->
+                    []
 
-            Just enemy ->
-                [ App.Enemy.render env enemy ]
-        ]
+                Just enemy ->
+                    [ App.Enemy.render env enemy ]
+            ]
 
 
 width : number
