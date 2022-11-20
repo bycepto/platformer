@@ -49,12 +49,11 @@ room1 hero =
     Room
         { hero = hero
         , lasers = []
-        , enemies = [ App.Enemy.init 400 ]
+        , enemies = [ App.Enemy.init 300 ]
         , blocks =
             [ App.Block.init 25 150 100 30
             , App.Block.init 175 300 100 30
             , App.Block.initMoving 275 285 50 30
-            , App.Block.init 325 310 50 30
             , App.Block.init 400 300 50 30
             , App.Block.initMoving 475 100 50 100
             , App.Block.init 475 300 50 100
@@ -103,11 +102,12 @@ handleFrame env room =
         |> updateEnemyLaserCollisions
         |> updateEnemies env
         |> updateBlocks
-        |> changeRoom
+        |> changeRoomHero
+        |> changeRoomEnemies
 
 
-changeRoom : Room -> Room
-changeRoom (Room room) =
+changeRoomHero : Room -> Room
+changeRoomHero (Room room) =
     let
         hero =
             room.hero
@@ -141,6 +141,65 @@ changeRoom (Room room) =
 
     else
         Room room
+
+
+changeRoomEnemies : Room -> Room
+changeRoomEnemies (Room room) =
+    let
+        ( goingLeft, notGoingLeft ) =
+            List.partition (\enemy -> enemy.roller.x < 0) room.enemies
+
+        ( goingRight, staying ) =
+            List.partition (\enemy -> enemy.roller.x > width) notGoingLeft
+    in
+    Room
+        { room
+            | enemies =
+                List.concat
+                    [ staying
+                    , case room.left of
+                        Nothing ->
+                            List.map (App.Enemy.setX 0) goingLeft
+
+                        Just _ ->
+                            []
+                    , case room.right of
+                        Nothing ->
+                            List.map (App.Enemy.setX width) goingRight
+
+                        Just _ ->
+                            []
+                    ]
+            , left =
+                room.left
+                    |> Maybe.map
+                        (\toRoom ->
+                            \h ->
+                                case toRoom h of
+                                    Room nextRoom ->
+                                        Room
+                                            { nextRoom
+                                                | enemies = List.map (App.Enemy.setX (width - nextRoomBuffer)) goingLeft ++ nextRoom.enemies
+                                            }
+                        )
+            , right =
+                room.right
+                    |> Maybe.map
+                        (\toRoom ->
+                            \h ->
+                                case toRoom h of
+                                    Room nextRoom ->
+                                        Room
+                                            { nextRoom
+                                                | enemies = List.map (App.Enemy.setX nextRoomBuffer) goingRight ++ nextRoom.enemies
+                                            }
+                        )
+        }
+
+
+nextRoomBuffer : Float
+nextRoomBuffer =
+    100
 
 
 updateHero : Env a -> Room -> Room
