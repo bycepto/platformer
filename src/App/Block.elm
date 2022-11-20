@@ -1,10 +1,12 @@
 module App.Block exposing
     ( Block
+    , Slope
     , boundingBox
     , init
     , initMoving
     , move
     , render
+    , renderSlope
     )
 
 import Canvas as V
@@ -23,6 +25,14 @@ type alias Block =
     , width : Float
     , height : Float
     , movement : Maybe Movement
+    }
+
+
+type alias Slope =
+    { x1 : Float
+    , y1 : Float
+    , x2 : Float
+    , y2 : Float
     }
 
 
@@ -109,4 +119,14 @@ render block =
         , VS.stroke Color.grey
         ]
         [ V.rect ( block.x, block.y ) block.width block.height
+        ]
+
+
+renderSlope : Slope -> V.Renderable
+renderSlope { x1, y1, x2, y2 } =
+    V.shapes
+        [ VS.fill Color.white
+        , VS.stroke Color.grey
+        ]
+        [ V.path ( x1, y1 ) [ V.lineTo ( x2, y2 ) ]
         ]

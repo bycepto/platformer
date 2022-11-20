@@ -9,7 +9,7 @@ module App.Roller exposing
     , update
     )
 
-import App.Block exposing (Block)
+import App.Block exposing (Block, Slope)
 import App.Lava exposing (Lava)
 import Canvas as V
 import Canvas.Settings as VS
@@ -33,6 +33,7 @@ type alias Room a =
     { a
         | blocks : List Block
         , lava : List Lava
+        , slopes : List Slope
     }
 
 
@@ -93,6 +94,7 @@ update env room roller =
             |> detectBlockCollisions room
             |> applyVelX
             |> applyVelY
+            |> collideWithSlopes room.slopes
             |> collideWithLava env room
 
 
@@ -330,6 +332,34 @@ collideWithBlockSides block roller =
 accelerationY : Float
 accelerationY =
     3.0
+
+
+
+-- slopes
+
+
+collideWithSlopes : List Slope -> Roller -> Roller
+collideWithSlopes slopes roller =
+    List.foldl
+        collideWithSlope
+        roller
+        slopes
+
+
+collideWithSlope : Slope -> Roller -> Roller
+collideWithSlope { x1, y1, x2, y2 } roller =
+    let
+        line =
+            CL.toLineSegment ( x1, y1 ) ( x2, y2 )
+    in
+    case circle roller of
+        CL.Circle c ->
+            case CL.detectLineCircleInfo line c of
+                Nothing ->
+                    roller
+
+                Just ( segment, _ ) ->
+                    { roller | y = segment.y2 - radius }
 
 
 

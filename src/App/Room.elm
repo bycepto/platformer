@@ -1,6 +1,6 @@
 module App.Room exposing (Room, init, render, update)
 
-import App.Block exposing (Block)
+import App.Block exposing (Block, Slope)
 import App.Enemy exposing (Enemy)
 import App.Hero exposing (Hero)
 import App.Laser exposing (Laser)
@@ -32,6 +32,7 @@ type Room
         -- obstacles
         , blocks : List Block
         , lava : List Lava
+        , slopes : List Slope
 
         -- exits
         , left : Maybe (Hero -> Room)
@@ -55,13 +56,14 @@ room1 hero =
             , App.Block.init 175 280 100 30
             , App.Block.initMoving 275 265 50 30
             , App.Block.init 400 300 50 30
-            , App.Block.initMoving 475 100 50 100
-            , App.Block.init 475 300 50 100
+            , App.Block.init 475 75 50 100
+            , App.Block.initMoving 475 300 50 100
             , App.Block.init 525 300 1000 10
             ]
         , lava =
             [ App.Lava.initMoving 0 400 width height
             ]
+        , slopes = [ Slope 125 150 475 75 ]
         , left = Nothing
         , right = Just room2
         }
@@ -79,6 +81,7 @@ room2 hero =
         , lava =
             [ App.Lava.initMoving 0 400 width height
             ]
+        , slopes = []
         , left = Just room1
         , right = Nothing
         }
@@ -289,7 +292,8 @@ render env (Room room) =
         []
     <|
         List.concat
-            [ List.map App.Block.render room.blocks
+            [ List.map App.Block.renderSlope room.slopes
+            , List.map App.Block.render room.blocks
             , List.map App.Lava.render room.lava
             , [ App.Hero.render env room.hero ]
 

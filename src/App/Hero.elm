@@ -6,7 +6,7 @@ module App.Hero exposing
     , update
     )
 
-import App.Block exposing (Block)
+import App.Block exposing (Block, Slope)
 import App.Laser exposing (Laser)
 import App.Lava exposing (Lava)
 import App.Roller exposing (Roller)
@@ -32,6 +32,7 @@ type alias Room a =
     { a
         | blocks : List Block
         , lava : List Lava
+        , slopes : List Slope
     }
 
 
