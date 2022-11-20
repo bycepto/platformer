@@ -63,7 +63,11 @@ room1 hero =
         , lava =
             [ App.Lava.initMoving 0 400 width height
             ]
-        , slopes = [ Slope 125 150 475 75 ]
+        , slopes =
+            [ -- HACK: extend the slope slightly into the block to prevent the
+              -- roller from briefly dropping between the block and slock
+              Slope (125 - 10) (150 + 2) 475 75
+            ]
         , left = Nothing
         , right = Just room2
         }
