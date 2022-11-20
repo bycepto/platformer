@@ -3,6 +3,7 @@ module App.Enemy exposing
     , applyLaser
     , init
     , render
+    , setX
     , update
     )
 
@@ -11,7 +12,6 @@ import App.Laser exposing (Laser)
 import App.Lava exposing (Lava)
 import App.Roller exposing (Roller)
 import Canvas as V
-import Collision as CL
 import Color
 
 
@@ -78,6 +78,15 @@ applyLaser { source, target } enemy =
             target
     in
     { enemy | roller = App.Roller.pushFrom x1 y2 enemy.roller }
+
+
+setX : Float -> Enemy -> Enemy
+setX x enemy =
+    let
+        roller =
+            enemy.roller
+    in
+    { enemy | roller = { roller | x = x } }
 
 
 
