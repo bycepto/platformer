@@ -42,7 +42,7 @@ type Room
 
 init : Hero -> Room
 init =
-    room1
+    roomDebug
 
 
 room1 : Hero -> Room
@@ -91,6 +91,27 @@ room2 hero =
             [ Slope -115 75 560 300
             ]
         , left = Just room1
+        , right = Nothing
+        }
+
+
+roomDebug : Hero -> Room
+roomDebug hero =
+    Room
+        { hero = hero
+        , lasers = []
+        , enemies = []
+        , blocks =
+            [ App.Block.init 0 300 1000 10
+            ]
+        , lava =
+            [ App.Lava.initMoving 0 400 width height
+            ]
+        , slopes =
+            [ Slope 100 300 300 200
+            , Slope 400 300 500 200
+            ]
+        , left = Nothing
         , right = Nothing
         }
 

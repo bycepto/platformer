@@ -347,10 +347,10 @@ collideWithSlopes slopes roller =
 
 
 collideWithSlope : Slope -> Roller -> Roller
-collideWithSlope { x1, y1, x2, y2 } roller =
+collideWithSlope slope roller =
     let
         line =
-            CL.toLineSegment ( x1, y1 ) ( x2, y2 )
+            CL.toLineSegment ( slope.x1, slope.y1 ) ( slope.x2, slope.y2 )
     in
     case circle roller of
         CL.Circle c ->
@@ -358,12 +358,30 @@ collideWithSlope { x1, y1, x2, y2 } roller =
                 Nothing ->
                     roller
 
-                Just ( segment, _ ) ->
-                    -- if roller.y + radius - canClimbUpThreshold > segment.y2 then
-                        { roller | y = segment.y2 - radius }
-                    --
-                    -- else
-                    --     roller
+                Just ( leftSegment, rightSegment ) ->
+                    { roller
+                        | y = leftSegment.y2 - radius
+                        , velX =
+                            -- if roller.y > rightSegment.y2 && App.Block.grade slope < -0.1 then
+                                roller.velX * 1 / (roller.x - rightSegment.x1)
+                            --
+                            -- else
+                            --     roller.velX
+                    }
+
+
+
+-- else
+--     roller
+-- canClimbUpSlope : Slope -> Roller -> Bool
+-- canClimbUpSlope slope roller =
+--     roller.y + radius - canClimbUpSlopeThreshold < segment.y2 && App.Block.grade slope < 3
+--
+
+
+canClimbUpSlopeThreshold : Float
+canClimbUpSlopeThreshold =
+    10
 
 
 

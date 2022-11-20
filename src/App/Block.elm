@@ -2,6 +2,7 @@ module App.Block exposing
     ( Block
     , Slope
     , boundingBox
+    , grade
     , init
     , initMoving
     , move
@@ -25,14 +26,6 @@ type alias Block =
     , width : Float
     , height : Float
     , movement : Maybe Movement
-    }
-
-
-type alias Slope =
-    { x1 : Float
-    , y1 : Float
-    , x2 : Float
-    , y2 : Float
     }
 
 
@@ -67,6 +60,21 @@ boundingBox { x, y, width, height } =
     , width = width
     , height = height
     }
+
+
+type alias Slope =
+    { x1 : Float
+    , y1 : Float
+    , x2 : Float
+    , y2 : Float
+    }
+
+
+grade : Slope -> Float
+grade { x1, y1, x2, y2 } =
+    Debug.log "grade" <|
+        (y2 - y1)
+            / (x2 - x1)
 
 
 
