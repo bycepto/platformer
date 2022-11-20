@@ -359,7 +359,11 @@ collideWithSlope { x1, y1, x2, y2 } roller =
                     roller
 
                 Just ( segment, _ ) ->
-                    { roller | y = segment.y2 - radius }
+                    -- if roller.y + radius - canClimbUpThreshold > segment.y2 then
+                        { roller | y = segment.y2 - radius }
+                    --
+                    -- else
+                    --     roller
 
 
 

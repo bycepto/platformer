@@ -50,7 +50,7 @@ room1 hero =
     Room
         { hero = hero
         , lasers = []
-        , enemies = [ App.Enemy.init 300 ]
+        , enemies = [ App.Enemy.spawn 300 250 ]
         , blocks =
             [ App.Block.init 25 150 100 30
             , App.Block.init 175 280 100 30
@@ -66,8 +66,9 @@ room1 hero =
         , slopes =
             [ -- HACK: extend the slope slightly into the block to prevent the
               -- roller from briefly dropping between the block and slock
-              Slope (125 - 10) (150 + 2) 475 75
+              -- Slope (125 - 10) (150 + 2) 475 75
               -- Slope 125 150 (175 + 2) 285
+              Slope 525 75 1200 300
             ]
         , left = Nothing
         , right = Just room2
@@ -79,14 +80,16 @@ room2 hero =
     Room
         { hero = hero
         , lasers = []
-        , enemies = [ App.Enemy.init 300, App.Enemy.init 500 ]
+        , enemies = [ App.Enemy.spawn 300 300, App.Enemy.spawn 500 300 ]
         , blocks =
             [ App.Block.init 0 300 1000 10
             ]
         , lava =
             [ App.Lava.initMoving 0 400 width height
             ]
-        , slopes = []
+        , slopes =
+            [ Slope -115 75 560 300
+            ]
         , left = Just room1
         , right = Nothing
         }

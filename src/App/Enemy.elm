@@ -1,9 +1,9 @@
 module App.Enemy exposing
     ( Enemy
     , applyLaser
-    , init
     , render
     , setX
+    , spawn
     , update
     )
 
@@ -39,14 +39,14 @@ type alias Enemy =
     }
 
 
-init : Float -> Enemy
-init x =
+spawn : Float -> Float -> Enemy
+spawn x y =
     { roller =
         App.Roller.init
             |> (\r ->
                     { r
                         | x = x
-                        , y = 25
+                        , y = y
                         , facingLeft = True
                         , angle = 180
                     }
