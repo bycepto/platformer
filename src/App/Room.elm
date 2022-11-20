@@ -67,6 +67,7 @@ room1 hero =
             [ -- HACK: extend the slope slightly into the block to prevent the
               -- roller from briefly dropping between the block and slock
               Slope (125 - 10) (150 + 2) 475 75
+              -- Slope 125 150 (175 + 2) 285
             ]
         , left = Nothing
         , right = Just room2
