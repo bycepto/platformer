@@ -37,3 +37,9 @@ elm-stuff
 dist/
 .cache
 .parcel-cache/
+
+# aider
+.aider*
+
+# Local Netlify folder
+.netlify

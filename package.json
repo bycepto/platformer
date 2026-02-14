@@ -3,15 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "start": "yarn run vite --port 3004",
-    "build": "yarn run vite build",
-    "preview": "yarn run vite preview",
-    "test": "elm-test"
+    "dev": "node build.js --watch",
+    "build": "node build.js --deploy",
+    "test": "echo 'no tests yet!'",
+    "lint": "pnpm exec elm-format --validate src",
+    "format": "pnpm exec elm-format --yes src"
   },
   "devDependencies": {
-    "elm": "^0.19.1-5",
-    "vite": "^3.2.7",
-    "vite-plugin-elm": "^2.7.2"
+    "@tailwindcss/postcss": "^4.0.13",
+    "@types/node": "^22.13.10",
+    "autoprefixer": "^10.4.21",
+    "esbuild": "^0.25.1",
+    "esbuild-plugin-elm": "^0.0.12",
+    "esbuild-style-plugin": "^1.6.3",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.0.13"
   },
   "dependencies": {
     "elm-canvas": "^2.2.4"
